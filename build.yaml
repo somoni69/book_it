@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      source_gen|combining_builder:
+        options:
+          build_extensions:
+            '^lib/{{}}.dart': 'lib/{{}}.g.dart'
+      json_serializable:
+        options:
+          # При парсинге JSON, если поле null, но не должно быть — кидать ошибку
+          checked: true
+          # Любой map преобразовывать явно
+          any_map: true
+          # Явное преобразование null
+          explicit_to_json: true
