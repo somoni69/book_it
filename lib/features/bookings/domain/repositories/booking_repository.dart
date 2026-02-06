@@ -1,6 +1,6 @@
 import '../entities/booking_entity.dart';
 import '../entities/service_entity.dart';
-import '../../data/models/working_hour_model.dart';
+import '../entities/working_hour_entity.dart';
 
 abstract class BookingRepository {
   // Получить записи для конкретного мастера на дату (для построения календаря)
@@ -8,6 +8,9 @@ abstract class BookingRepository {
     String masterId,
     DateTime date,
   );
+
+  // Получить все записи клиента
+  Future<List<BookingEntity>> getClientBookings(String clientId);
 
   // Создать новую запись
   Future<BookingEntity> createBooking({
@@ -25,5 +28,5 @@ abstract class BookingRepository {
 
   Future<List<ServiceEntity>> getServices(String masterId);
 
-  Future<List<WorkingHour>> getSchedule(String masterId);
+  Future<List<WorkingHourEntity>> getSchedule(String masterId);
 }

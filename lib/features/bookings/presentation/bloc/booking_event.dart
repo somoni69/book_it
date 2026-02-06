@@ -11,11 +11,12 @@ abstract class BookingEvent extends Equatable {
 class LoadBookingsForDate extends BookingEvent {
   final DateTime date;
   final int serviceDuration;
+  final String serviceId;
 
-  const LoadBookingsForDate(this.date, this.serviceDuration);
+  const LoadBookingsForDate(this.date, this.serviceDuration, this.serviceId);
 
   @override
-  List<Object> get props => [date, serviceDuration];
+  List<Object> get props => [date, serviceDuration, serviceId];
 }
 
 class SelectTimeSlot extends BookingEvent {

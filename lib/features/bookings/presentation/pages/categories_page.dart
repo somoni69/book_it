@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
+import 'client_history_screen.dart';
 import 'masters_list_page.dart';
 
 class CategoriesPage extends StatelessWidget {
@@ -9,20 +10,40 @@ class CategoriesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repo = BookingRepositoryImpl(BookingRemoteDataSourceImpl(Supabase.instance.client));
+    final repo = BookingRepositoryImpl(
+      BookingRemoteDataSourceImpl(Supabase.instance.client),
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("BookIt: Сервисы"),
-        actions: [IconButton(icon: const Icon(Icons.exit_to_app), onPressed: () => Supabase.instance.client.auth.signOut())],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ClientHistoryScreen(),
+              ),
+            ),
+            tooltip: 'Мои записи',
+          ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            onPressed: () => Supabase.instance.client.auth.signOut(),
+            tooltip: 'Выход',
+          ),
+        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: repo.getCategories(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return const Center(child: CircularProgressIndicator());
+
           final categories = snapshot.data ?? [];
-          if (categories.isEmpty) return const Center(child: Text("Нет категорий"));
+          if (categories.isEmpty)
+            return const Center(child: Text("Нет категорий"));
 
           return GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -43,14 +64,24 @@ class CategoriesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, Map<String, dynamic> category) {
+  Widget _buildCategoryCard(
+    BuildContext context,
+    Map<String, dynamic> category,
+  ) {
     // Маппинг иконок (текст из базы -> иконка Flutter)
     IconData iconData;
     switch (category['icon']) {
-      case 'medical_services': iconData = Icons.medical_services; break;
-      case 'face': iconData = Icons.face; break;
-      case 'fitness_center': iconData = Icons.fitness_center; break;
-      default: iconData = Icons.category;
+      case 'medical_services':
+        iconData = Icons.medical_services;
+        break;
+      case 'face':
+        iconData = Icons.face;
+        break;
+      case 'fitness_center':
+        iconData = Icons.fitness_center;
+        break;
+      default:
+        iconData = Icons.category;
     }
 
     return GestureDetector(
@@ -67,14 +98,20 @@ class CategoriesPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: Colors.blueAccent.withOpacity(0.1),
+              backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
               child: Icon(iconData, size: 30, color: Colors.blueAccent),
             ),
             const SizedBox(height: 12),

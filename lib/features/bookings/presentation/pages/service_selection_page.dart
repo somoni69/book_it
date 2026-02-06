@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
+import '../../data/repositories/service_repository_impl.dart';
 import '../../domain/entities/service_entity.dart';
-import 'booking_page.dart'; // Сюда будем переходить
+import '../bloc/booking_bloc.dart';
+import '../bloc/booking_event.dart';
+import 'book_service_screen.dart';
 
 class ServiceSelectionPage extends StatefulWidget {
   final String masterId; // <--- ПРИНИМАЕМ СНАРУЖИ
@@ -78,11 +82,33 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                     ),
                   ),
                   onTap: () {
-                    // ПЕРЕХОД К КАЛЕНДАРЮ
-                    // Мы передаем выбранную услугу дальше!
+                    // ПЕРЕХОД К КАЛЕНДАРЮ С НОВЫМ ЭКРАНОМ
+                    final supabase = Supabase.instance.client;
+                    final dataSource = BookingRemoteDataSourceImpl(supabase);
+                    final repository = BookingRepositoryImpl(dataSource);
+                    final serviceRepository = ServiceRepositoryImpl(supabase);
+
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => BookingPageWrapper(service: service),
+                        builder: (_) => BlocProvider(
+                          create: (context) =>
+                              BookingBloc(
+                                repository: repository,
+                                serviceRepository: serviceRepository,
+                                masterId: service.masterId,
+                              )..add(
+                                LoadBookingsForDate(
+                                  DateTime.now(),
+                                  service.durationMin,
+                                  service.id,
+                                ),
+                              ),
+                          child: BookServiceScreen(
+                            masterId: service.masterId,
+                            serviceId: service.id,
+                            serviceName: service.title,
+                          ),
+                        ),
                       ),
                     );
                   },

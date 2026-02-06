@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/presentation/pages/master_setup_page.dart';
-import 'features/bookings/data/datasources/booking_remote_datasource.dart';
-import 'features/bookings/data/repositories/booking_repository_impl.dart';
-import 'features/bookings/presentation/bloc/booking_bloc.dart';
-import 'features/bookings/presentation/bloc/booking_event.dart';
 import 'features/bookings/presentation/pages/categories_page.dart';
-import 'features/bookings/presentation/pages/master_journal_page.dart';
+import 'features/bookings/presentation/pages/master_home_screen.dart';
 
 class RoleBasedHome extends StatefulWidget {
   const RoleBasedHome({super.key});
@@ -43,8 +38,6 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
         });
       }
     } catch (e) {
-      print("❌ ОШИБКА ПРИ ЗАГРУЗКЕ РОЛИ: $e");
-
       // ФОЛБЕК: Если ошибка, считаем клиентом и пускаем в приложение
       // чтобы не видеть вечную загрузку
       if (mounted) {
@@ -62,11 +55,6 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Инициализация зависимостей
-    final supabase = Supabase.instance.client;
-    final dataSource = BookingRemoteDataSourceImpl(supabase);
-    final repository = BookingRepositoryImpl(dataSource);
-
     // ЛОГИКА ВЫБОРА ЭКРАНА
 
     if (_role == 'master') {
@@ -75,23 +63,10 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
         return const MasterSetupPage();
       }
 
-      // У мастера должен быть свой ID (не из сервиса), берем текущего юзера
-      // Для Блока нам нужен ID, чье расписание грузить. Мастер грузит СВОЕ.
-      final currentUserId = supabase.auth.currentUser!.id;
-
-      return BlocProvider(
-        create: (context) =>
-            BookingBloc(
-              repository: repository,
-              masterId: currentUserId, // <--- Мастер смотрит свой журнал
-            )..add(
-              LoadBookingsForDate(DateTime.now(), 60),
-            ), // Дефолт длительность для журнала
-        child: const MasterJournalPage(),
-      );
+      // Мастер с заполненной специальностью -> Главный экран мастера
+      return const MasterHomeScreen();
     } else {
       // КЛИЕНТ
-      // Ему пока не нужен Блок здесь, он получит его внутри BookingPageWrapper
       return const CategoriesPage();
     }
   }

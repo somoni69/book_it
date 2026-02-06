@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'features/bookings/data/datasources/booking_remote_datasource.dart';
-import 'features/bookings/data/repositories/booking_repository_impl.dart';
-import 'features/bookings/presentation/bloc/booking_bloc.dart';
-import 'features/bookings/presentation/bloc/booking_event.dart';
-import 'home_wrapper.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'role_based_home.dart';
+import 'core/services/notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/services/firebase_messaging_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализируем локализацию для календаря
+  await initializeDateFormatting('ru_RU', null);
+  await Firebase.initializeApp();
+
+  await FirebaseMessagingService().initialize();
+
+  await NotificationService().initialize();
+
   await Supabase.initialize(
     url: 'https://pxkmhblwjjwirpsvmgdb.supabase.co',
     anonKey: 'sb_publishable_RTUaRjY7LszEuXw870VjuA_FzjOwltP',

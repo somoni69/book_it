@@ -27,13 +27,11 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
 
     final response = await supabase
         .from('bookings')
-        .select(
-          '*, client_profile:profiles!bookings_client_id_fkey(full_name)',
-        ) // <--- Явный FK и alias
+        .select('*, client_profile:profiles!bookings_client_id_fkey(full_name)')
         .eq('master_id', masterId)
-        .eq('organization_id', _hardcodedOrganizationId) // Filter by org
+        .eq('organization_id', _hardcodedOrganizationId)
         .gte('start_time', startOfDate.toIso8601String())
-        .lt('end_time', endOfDate.toIso8601String())
+        .lt('start_time', endOfDate.toIso8601String())
         .order('start_time', ascending: true);
 
     return (response as List)

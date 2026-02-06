@@ -1,44 +1,56 @@
 name: book_it
-description: "A new Flutter project."
+description: "BookIt - Система онлайн-записи"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.4
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  
-  # Architecture & State Management
-  flutter_bloc: ^8.1.3
-  get_it: ^7.6.0       # Service Locator (DI)
-  injectable: ^2.3.2   # Генерация DI
-  equatable: ^2.0.5    # Сравнение объектов
 
-  # Network & Backend
-  supabase_flutter: ^2.3.0 # Официальный клиент
-  
-  # Data Classes & JSON
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
+  # UI & Navigation
+  flutter_bloc: ^9.1.1
+  go_router: ^17.0.1
+  provider: ^6.0.5
 
-  # UI & Utilities
-  intl: ^0.19.0        # Форматирование дат
-  table_calendar: ^3.1.0 # Топовый календарь
-  go_router: ^13.0.0   # Навигация (удобно для Deep Links)
+  # Database & Networking
+  supabase_flutter: ^2.1.2
+  dio: ^5.3.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Firebase & Notifications
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
+  flutter_local_notifications: ^20.0.0
+
+  # Calendar Integration
+  add_2_calendar: ^3.0.1
+  calendar_events: ^1.0.5
+  permission_handler: ^12.0.1
+
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.3.0
+  equatable: ^2.0.5
+  get_it: ^9.2.0
+  injectable: ^2.3.0
+  dartz: ^0.10.1
+  url_launcher: ^6.1.14
+  share_plus: ^12.0.1
+  cached_network_image: ^3.3.0
+  table_calendar: ^3.0.9
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  build_runner: ^2.4.8
-  freezed: ^2.4.7
-  json_serializable: ^6.7.1
-  injectable_generator: ^2.4.1
-
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
 
+dependencies_overrides:
+  firebase_messaging_platform_interface: 5.3.0  # фикс для Android 14+

@@ -1,43 +1,143 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../domain/entities/booking_entity.dart';
 
-// Указываем, что этот файл состоит из частей, которые сгенерирует скрипт
-part 'booking_model.freezed.dart';
-part 'booking_model.g.dart';
+class BookingModel {
+  final String id;
+  final String clientId;
+  final String masterId;
+  final String serviceId;
+  final DateTime startTime;
+  final DateTime endTime;
+  final String status;
+  final double price;
+  final String currency;
+  final DateTime? createdAt;
+  final String? comment;
+  final double? rating;
+  final Map<String, dynamic>? clientProfile;
+  final Map<String, dynamic>? masterProfile;
+  final Map<String, dynamic>? serviceDetails;
+  final String? organizationId;
 
-@freezed
-class BookingModel with _$BookingModel {
-  // Нам нужен кастомный конструктор и методы, поэтому добавляем ._()
-  const BookingModel._();
+  const BookingModel({
+    required this.id,
+    required this.clientId,
+    required this.masterId,
+    required this.serviceId,
+    required this.startTime,
+    required this.endTime,
+    required this.status,
+    required this.price,
+    required this.currency,
+    this.createdAt,
+    this.comment,
+    this.rating,
+    this.clientProfile,
+    this.masterProfile,
+    this.serviceDetails,
+    this.organizationId,
+  });
 
-  // Описываем поля точно так, как они приходят из Supabase (snake_case превращаем в camelCase)
-  // @JsonKey(name: 'field_name') помогает мапить sql_names в dartNames
-  const factory BookingModel({
-    required String id,
-    @JsonKey(name: 'master_id') required String masterId,
-    @JsonKey(name: 'client_id') required String clientId,
-    @JsonKey(name: 'organization_id') required String organizationId,
-    @JsonKey(name: 'service_id')
-    String? serviceId, // Может быть null в БД, но в коде мы хотим String?
-
-    @JsonKey(name: 'start_time') required DateTime startTime,
-    @JsonKey(name: 'end_time') required DateTime endTime,
-
-    @Default('pending')
-    String status, // Supabase вернет строку, мапим в enum позже
+  BookingModel copyWith({
+    String? id,
+    String? clientId,
+    String? masterId,
+    String? serviceId,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? status,
+    double? price,
+    String? currency,
+    DateTime? createdAt,
     String? comment,
-    // В Supabase это приходит как map: "profiles": {"full_name": "Иван"}
-    @JsonKey(name: 'client_profile') Map<String, dynamic>? clientProfile,
-  }) = _BookingModel;
+    double? rating,
+    Map<String, dynamic>? clientProfile,
+    Map<String, dynamic>? masterProfile,
+    Map<String, dynamic>? serviceDetails,
+    String? organizationId,
+  }) {
+    return BookingModel(
+      id: id ?? this.id,
+      clientId: clientId ?? this.clientId,
+      masterId: masterId ?? this.masterId,
+      serviceId: serviceId ?? this.serviceId,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      status: status ?? this.status,
+      price: price ?? this.price,
+      currency: currency ?? this.currency,
+      createdAt: createdAt ?? this.createdAt,
+      comment: comment ?? this.comment,
+      rating: rating ?? this.rating,
+      clientProfile: clientProfile ?? this.clientProfile,
+      masterProfile: masterProfile ?? this.masterProfile,
+      serviceDetails: serviceDetails ?? this.serviceDetails,
+      organizationId: organizationId ?? this.organizationId,
+    );
+  }
 
-  // Метод для создания из JSON
-  factory BookingModel.fromJson(Map<String, dynamic> json) =>
-      _$BookingModelFromJson(json);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'client_id': clientId,
+      'master_id': masterId,
+      'service_id': serviceId,
+      'start_time': startTime.toIso8601String(),
+      'end_time': endTime.toIso8601String(),
+      'status': status,
+      'price': price,
+      'currency': currency,
+      'created_at': createdAt?.toIso8601String(),
+      'comment': comment,
+      'rating': rating,
+      'client_profile': clientProfile,
+      'master_profile': masterProfile,
+      'service_details': serviceDetails,
+      'organization_id': organizationId,
+    };
+  }
 
-  // Маппер: Превращаем "Грязную" Модель БД в "Чистую" Entity Домена
+  factory BookingModel.fromJson(Map<String, dynamic> json) {
+    return BookingModel(
+      id: json['id'] as String,
+      clientId: json['client_id'] as String,
+      masterId: json['master_id'] as String,
+      serviceId: json['service_id'] as String,
+      startTime: DateTime.parse(json['start_time'] as String),
+      endTime: DateTime.parse(json['end_time'] as String),
+      status: json['status'] as String,
+      price: (json['price'] as num).toDouble(),
+      currency: json['currency'] as String,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      comment: json['comment'] as String?,
+      rating:
+          json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      clientProfile: json['client_profile'] as Map<String, dynamic>?,
+      masterProfile: json['master_profile'] as Map<String, dynamic>?,
+      serviceDetails: json['service_details'] as Map<String, dynamic>?,
+      organizationId: json['organization_id'] as String?,
+    );
+  }
+
   BookingEntity toEntity() {
-    // Достаем имя или ставим заглушку
-    final clientName = clientProfile?['full_name'] as String? ?? 'Аноним';
+    BookingStatus bookingStatus;
+    switch (status.toLowerCase()) {
+      case 'pending':
+        bookingStatus = BookingStatus.pending;
+        break;
+      case 'confirmed':
+        bookingStatus = BookingStatus.confirmed;
+        break;
+      case 'cancelled':
+        bookingStatus = BookingStatus.cancelled;
+        break;
+      case 'completed':
+        bookingStatus = BookingStatus.completed;
+        break;
+      default:
+        bookingStatus = BookingStatus.pending;
+    }
 
     return BookingEntity(
       id: id,
@@ -46,13 +146,24 @@ class BookingModel with _$BookingModel {
       serviceId: serviceId,
       startTime: startTime,
       endTime: endTime,
-      // Конвертируем строку из БД в Enum
-      status: BookingStatus.values.firstWhere(
-        (e) => e.name == status,
-        orElse: () => BookingStatus.pending,
-      ),
+      status: bookingStatus,
       comment: comment,
-      clientName: clientName, // <--- Нужно добавить это поле в BookingEntity!
+      clientName: clientProfile?['full_name'] as String? ?? 'Аноним',
+      masterName: masterProfile?['full_name'] as String? ?? 'Мастер',
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is BookingModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'BookingModel(id: $id, status: $status)';
   }
 }

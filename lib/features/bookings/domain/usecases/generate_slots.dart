@@ -1,86 +1,177 @@
+import 'package:flutter/material.dart';
 import '../entities/booking_entity.dart';
-import '../../data/models/working_hour_model.dart';
+import '../entities/working_hour_entity.dart';
+import '../entities/daily_schedule.dart';
 import '../entities/time_slot.dart';
+import '../repositories/booking_repository.dart';
+import '../repositories/service_repository.dart';
+
+class GenerateSlotsParams {
+  final String masterId;
+  final String serviceId;
+  final DateTime selectedDate;
+
+  GenerateSlotsParams({
+    required this.masterId,
+    required this.serviceId,
+    required this.selectedDate,
+  });
+}
 
 class GenerateSlotsUseCase {
-  List<TimeSlot> call({
-    required List<BookingEntity> bookings,
-    required List<WorkingHour> schedule, // <--- ПРИНИМАЕМ ГРАФИК
-    required DateTime date,
-    required int serviceDurationMin,
-  }) {
-    final List<TimeSlot> slots = [];
+  final BookingRepository _bookingRepo;
+  final ServiceRepository _serviceRepo;
 
-    // 1. Находим настройки для этого дня недели
-    // DateTime.weekday: 1 = Пн, 7 = Вс.
-    final daySettings = schedule.firstWhere(
-      (h) => h.dayOfWeek == date.weekday,
-      orElse: () => WorkingHour(
-        id: '',
-        dayOfWeek: 0,
-        startTime: '09:00',
-        endTime: '18:00',
-        isDayOff: false,
-      ), // Дефолт
+  GenerateSlotsUseCase({
+    required BookingRepository bookingRepo,
+    required ServiceRepository serviceRepo,
+  })  : _bookingRepo = bookingRepo,
+        _serviceRepo = serviceRepo;
+
+  Future<List<TimeSlot>> call(GenerateSlotsParams params) async {
+    // 1. Получаем график мастера на выбранный день
+    final schedule = await _getScheduleForDate(
+      params.masterId,
+      params.selectedDate,
     );
 
-    // 2. Если выходной - возвращаем пустоту
-    if (daySettings.isDayOff) {
-      print(
-        "🛑 Сегодня выходной (GenerateSlotsUseCase)!",
-      ); // <--- Добавь принт сюда
+    if (schedule.isDayOff) {
       return [];
     }
 
-    // 3. Парсим время начала и конца (строки "09:00" -> DateTime)
-    final startParts = daySettings.startTime.split(':');
-    final endParts = daySettings.endTime.split(':');
-
-    final workStart = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      int.parse(startParts[0]),
-      int.parse(startParts[1]),
+    // 2. Получаем существующие брони
+    final bookings = await _bookingRepo.getBookingsForMaster(
+      params.masterId,
+      params.selectedDate,
     );
 
-    final workEnd = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      int.parse(endParts[0]),
-      int.parse(endParts[1]),
+    // 3. Получаем длительность услуги
+    final services = await _serviceRepo.getServicesByMaster(params.masterId);
+    final service = services.firstWhere(
+      (s) => s.id == params.serviceId,
+      orElse: () => services.first,
     );
 
-    // 4. Генерируем слоты
-    final step = Duration(minutes: serviceDurationMin);
-    DateTime current = workStart;
+    // 4. Генерируем слоты с учетом нескольких рабочих окон
+    return _generateSlotsFromWindows(
+      schedule: schedule,
+      bookings: bookings,
+      serviceDuration: service.durationMin,
+      selectedDate: params.selectedDate,
+    );
+  }
 
-    while (current.add(step).isBefore(workEnd) ||
-        current.add(step).isAtSameMomentAs(workEnd)) {
-      final slotEnd = current.add(step);
+  Future<DailySchedule> _getScheduleForDate(
+    String masterId,
+    DateTime date,
+  ) async {
+    final dayOfWeek = date.weekday;
+    final schedules = await _bookingRepo.getSchedule(masterId);
 
-      // Проверка пересечений
-      bool isOverlapping = bookings.any((booking) {
-        if (booking.status == BookingStatus.cancelled) return false;
-        return booking.startTime.isBefore(slotEnd) &&
-            booking.endTime.isAfter(current);
-      });
+    final daySchedule = schedules.firstWhere(
+      (s) => s.dayOfWeek == dayOfWeek,
+      orElse: () => const WorkingHourEntity(
+        id: '',
+        masterId: '',
+        dayOfWeek: 0,
+        startTime: TimeOfDay(hour: 9, minute: 0),
+        endTime: TimeOfDay(hour: 18, minute: 0),
+        isDayOff: false,
+      ),
+    );
 
-      // Проверка на прошедшее время (если сегодня)
-      bool isPast = current.isBefore(DateTime.now());
+    return DailySchedule(
+      dayOfWeek: dayOfWeek,
+      isDayOff: daySchedule.isDayOff,
+      workingWindows: daySchedule.isDayOff
+          ? []
+          : [
+              WorkingWindow(
+                startTime: daySchedule.startTime,
+                endTime: daySchedule.endTime,
+              ),
+            ],
+    );
+  }
 
-      slots.add(
-        TimeSlot(
-          startTime: current,
-          endTime: slotEnd,
-          isAvailable: !isOverlapping && !isPast,
-        ),
+  List<TimeSlot> _generateSlotsFromWindows({
+    required DailySchedule schedule,
+    required List<BookingEntity> bookings,
+    required int serviceDuration,
+    required DateTime selectedDate,
+  }) {
+    final slots = <TimeSlot>[];
+
+    for (final window in schedule.workingWindows) {
+      final windowSlots = _generateSlotsForWindow(
+        window: window,
+        bookings: bookings,
+        serviceDuration: serviceDuration,
+        selectedDate: selectedDate,
       );
-
-      current = current.add(step);
+      slots.addAll(windowSlots);
     }
 
     return slots;
+  }
+
+  List<TimeSlot> _generateSlotsForWindow({
+    required WorkingWindow window,
+    required List<BookingEntity> bookings,
+    required int serviceDuration,
+    required DateTime selectedDate,
+  }) {
+    final slots = <TimeSlot>[];
+
+    final startMinutes = window.startTime.hour * 60 + window.startTime.minute;
+    final endMinutes = window.endTime.hour * 60 + window.endTime.minute;
+
+    for (var minute = startMinutes;
+        minute <= endMinutes - serviceDuration;
+        minute += 15) {
+      final slotStartMinutes = minute;
+      final slotEndMinutes = minute + serviceDuration;
+
+      final slotStart = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        slotStartMinutes ~/ 60,
+        slotStartMinutes % 60,
+      );
+
+      final slotEnd = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        slotEndMinutes ~/ 60,
+        slotEndMinutes % 60,
+      );
+
+      if (!_isSlotBooked(slotStart, slotEnd, bookings)) {
+        final isPast = slotStart.isBefore(DateTime.now());
+        slots.add(
+          TimeSlot(
+            startTime: slotStart,
+            endTime: slotEnd,
+            isAvailable: !isPast,
+          ),
+        );
+      }
+    }
+
+    return slots;
+  }
+
+  bool _isSlotBooked(
+    DateTime slotStart,
+    DateTime slotEnd,
+    List<BookingEntity> bookings,
+  ) {
+    return bookings.any((booking) {
+      if (booking.status == BookingStatus.cancelled) return false;
+      return booking.startTime.isBefore(slotEnd) &&
+          booking.endTime.isAfter(slotStart);
+    });
   }
 }

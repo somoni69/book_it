@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Импорты слоев
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
+import '../../data/repositories/service_repository_impl.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
 import '../bloc/booking_state.dart';
@@ -18,16 +19,23 @@ class BookingPageWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ручная сборка зависимостей (Manual DI)
-    // В реальном проекте это будет делать GetIt/Injectable
     final supabase = Supabase.instance.client;
     final dataSource = BookingRemoteDataSourceImpl(supabase);
     final repository = BookingRepositoryImpl(dataSource);
+    final serviceRepository = ServiceRepositoryImpl(supabase);
 
     return BlocProvider(
-      create: (context) =>
-          BookingBloc(repository: repository, masterId: service.masterId)
-            ..add(LoadBookingsForDate(DateTime.now(), service.durationMin)),
+      create: (context) => BookingBloc(
+        repository: repository,
+        serviceRepository: serviceRepository,
+        masterId: service.masterId,
+      )..add(
+          LoadBookingsForDate(
+            DateTime.now(),
+            service.durationMin,
+            service.id,
+          ),
+        ),
       child: BookingPage(service: service),
     );
   }
@@ -105,13 +113,13 @@ class _BookingPageState extends State<BookingPage> {
                     _focusedDay = focusedDay;
                   });
 
-                  // Шлем ивент в Блок: "Загрузи брони на эту дату!"
                   context.read<BookingBloc>().add(
-                    LoadBookingsForDate(
-                      selectedDay,
-                      widget.service.durationMin,
-                    ),
-                  );
+                        LoadBookingsForDate(
+                          selectedDay,
+                          widget.service.durationMin,
+                          widget.service.id,
+                        ),
+                      );
                 }
               },
               calendarStyle: const CalendarStyle(
@@ -150,7 +158,9 @@ class _BookingPageState extends State<BookingPage> {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
                             "Доступное время",
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -165,12 +175,11 @@ class _BookingPageState extends State<BookingPage> {
                                   padding: const EdgeInsets.all(16),
                                   gridDelegate:
                                       const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 4, // 4 слота в ряд
-                                        childAspectRatio:
-                                            2.2, // Пропорция кнопки
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
-                                      ),
+                                    crossAxisCount: 4, // 4 слота в ряд
+                                    childAspectRatio: 2.2, // Пропорция кнопки
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                  ),
                                   itemCount: state.slots.length,
                                   itemBuilder: (context, index) {
                                     final slot = state.slots[index];
@@ -180,8 +189,8 @@ class _BookingPageState extends State<BookingPage> {
                                     return GestureDetector(
                                       onTap: slot.isAvailable
                                           ? () => context
-                                                .read<BookingBloc>()
-                                                .add(SelectTimeSlot(slot))
+                                              .read<BookingBloc>()
+                                              .add(SelectTimeSlot(slot))
                                           : null,
                                       child: AnimatedContainer(
                                         duration: const Duration(
@@ -192,8 +201,8 @@ class _BookingPageState extends State<BookingPage> {
                                           color: isSelected
                                               ? Colors.blueAccent
                                               : (slot.isAvailable
-                                                    ? Colors.white
-                                                    : Colors.grey[100]),
+                                                  ? Colors.white
+                                                  : Colors.grey[100]),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -202,16 +211,16 @@ class _BookingPageState extends State<BookingPage> {
                                             color: isSelected
                                                 ? Colors.blueAccent
                                                 : (slot.isAvailable
-                                                      ? Colors.grey.shade300
-                                                      : Colors.transparent),
+                                                    ? Colors.grey.shade300
+                                                    : Colors.transparent),
                                             width: 1.5,
                                           ),
-                                          boxShadow:
-                                              slot.isAvailable && !isSelected
+                                          boxShadow: slot.isAvailable &&
+                                                  !isSelected
                                               ? [
                                                   BoxShadow(
                                                     color: Colors.grey
-                                                        .withOpacity(0.1),
+                                                        .withValues(alpha: 0.1),
                                                     blurRadius: 4,
                                                     offset: const Offset(0, 2),
                                                   ),
@@ -225,8 +234,8 @@ class _BookingPageState extends State<BookingPage> {
                                               color: isSelected
                                                   ? Colors.white
                                                   : (slot.isAvailable
-                                                        ? Colors.black87
-                                                        : Colors.grey[400]),
+                                                      ? Colors.black87
+                                                      : Colors.grey[400]),
                                               fontWeight: isSelected
                                                   ? FontWeight.bold
                                                   : FontWeight.w500,
@@ -268,17 +277,15 @@ class _BookingPageState extends State<BookingPage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                onPressed:
-                                    state.submissionStatus ==
+                                onPressed: state.submissionStatus ==
                                         BookingSubmissionStatus.submitting
                                     ? null // Блокируем кнопку пока грузится
                                     : () {
                                         context.read<BookingBloc>().add(
-                                          ConfirmBooking(widget.service.id),
-                                        );
+                                              ConfirmBooking(widget.service.id),
+                                            );
                                       },
-                                child:
-                                    state.submissionStatus ==
+                                child: state.submissionStatus ==
                                         BookingSubmissionStatus.submitting
                                     ? const SizedBox(
                                         height: 20,

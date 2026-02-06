@@ -22,8 +22,7 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
   @override
   void initState() {
     super.initState();
-    // Сразу грузим данные на сегодня
-    context.read<BookingBloc>().add(LoadBookingsForDate(_selectedDate, 60));
+    context.read<BookingBloc>().add(LoadBookingsForDate(_selectedDate, 60, ''));
   }
 
   @override
@@ -49,8 +48,8 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
               if (picked != null) {
                 setState(() => _selectedDate = picked);
                 context.read<BookingBloc>().add(
-                  LoadBookingsForDate(picked, 60),
-                );
+                      LoadBookingsForDate(picked, 60, ''),
+                    );
               }
             },
           ),
@@ -153,8 +152,8 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
                         onDismissed: (direction) {
                           // Шлем ивент
                           context.read<BookingBloc>().add(
-                            CancelBookingEvent(booking.id),
-                          );
+                                CancelBookingEvent(booking.id),
+                              );
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Запись отменена")),
@@ -196,7 +195,8 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
         ],
       ),
       child: IntrinsicHeight(
@@ -234,7 +234,7 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(

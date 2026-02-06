@@ -35,16 +35,20 @@ class _LoginPageState extends State<LoginPage> {
         await authRepo.sendOtp(email);
       }
 
+      if (!mounted) return;
       setState(() => _codeSent = true); // Показываем поле для кода
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Код отправлен на почту!")));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Ошибка: $e"), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -57,6 +61,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       // Успех -> Main сам перекинет
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Неверный код: $e"),
@@ -98,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 16),
                   // Выбор Роли
                   DropdownButtonFormField<String>(
-                    value: _selectedRole,
+                    initialValue: _selectedRole,
                     decoration: const InputDecoration(
                       labelText: "Кто вы?",
                       border: OutlineInputBorder(),
@@ -117,7 +122,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
                 TextField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -137,7 +141,6 @@ class _LoginPageState extends State<LoginPage> {
                       ? const CircularProgressIndicator()
                       : const Text("Получить код"),
                 ),
-
                 TextButton(
                   onPressed: () =>
                       setState(() => _isRegistering = !_isRegistering),
