@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:book_it/core/services/notification_service.dart';
 import 'package:book_it/core/utils/user_utils.dart';
+import 'package:book_it/core/utils/notification_router.dart';
 
 class FirebaseMessagingService {
   static final FirebaseMessagingService _instance =
@@ -49,10 +50,10 @@ class FirebaseMessagingService {
     // Настройка для iOS
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
 
     final settings = InitializationSettings(
       android: androidSettings,
@@ -135,14 +136,9 @@ class FirebaseMessagingService {
   void _handleNotificationClick(RemoteMessage message) {
     debugPrint('👆 Клик по уведомлению: ${message.data}');
 
-    // Навигация на нужный экран
+    // Навигация через NotificationRouter
     final screen = message.data['screen'];
-    _navigateToScreen(screen, message.data);
-  }
-
-  void _navigateToScreen(String? screen, Map<String, dynamic> data) {
-    // TODO: Реализовать навигацию в зависимости от типа уведомления
-    // Например: screen = 'booking_details', data = {'booking_id': '123'}
+    NotificationRouter().navigateToScreen(screen, message.data);
   }
 }
 
