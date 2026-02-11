@@ -203,7 +203,6 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                 },
                 calendarFormat: CalendarFormat.month,
                 startingDayOfWeek: StartingDayOfWeek.monday,
-
                 headerStyle: const HeaderStyle(
                   formatButtonVisible: false,
                   titleCentered: true,
@@ -223,7 +222,6 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                   headerPadding: EdgeInsets.only(bottom: 12),
                   headerMargin: EdgeInsets.only(bottom: 8),
                 ),
-
                 calendarStyle: CalendarStyle(
                   // ← ИСПРАВЛЯЕМ ЦВЕТ ТЕКУЩЕГО ДНЯ
                   todayDecoration: BoxDecoration(
@@ -265,7 +263,6 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                   cellPadding: const EdgeInsets.all(6),
                   cellMargin: EdgeInsets.zero,
                 ),
-
                 daysOfWeekStyle: const DaysOfWeekStyle(
                   weekdayStyle: TextStyle(
                     fontSize: 12,
@@ -405,18 +402,18 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
           decoration: BoxDecoration(
             color: isAvailable
                 ? (isSelected
-                      ? const Color(0xFF4A6EF6)
-                      : const Color(0xFFF8F9FF)) // ← СВЕТЛЫЙ ФОН ДЛЯ ДОСТУПНЫХ
+                    ? const Color(0xFF4A6EF6)
+                    : const Color(0xFFF8F9FF)) // ← СВЕТЛЫЙ ФОН ДЛЯ ДОСТУПНЫХ
                 : const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
                   ? const Color(0xFF4A6EF6)
                   : (isAvailable
-                        ? const Color(
-                            0xFFE8EBFF,
-                          ) // ← СВЕТЛАЯ ГРАНИЦА ДЛЯ ДОСТУПНЫХ
-                        : Colors.transparent),
+                      ? const Color(
+                          0xFFE8EBFF,
+                        ) // ← СВЕТЛАЯ ГРАНИЦА ДЛЯ ДОСТУПНЫХ
+                      : Colors.transparent),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected
@@ -490,9 +487,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
         child: ElevatedButton(
           onPressed: isEnabled ? _confirmBooking : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: isEnabled
-                ? const Color(0xFF4A6EF6)
-                : const Color(0xFFE8EBFF),
+            backgroundColor:
+                isEnabled ? const Color(0xFF4A6EF6) : const Color(0xFFE8EBFF),
             foregroundColor: isEnabled ? Colors.white : const Color(0xFFA0A9FF),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -525,11 +521,18 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       if (booking == null) return;
 
       // Добавляем в календарь
-      final added = await CalendarService().addBookingToCalendar(
-        booking: booking,
+      final description = CalendarService.instance.buildBookingDescription(
         serviceName: widget.serviceName,
-        masterName: _masterName, // Получить имя мастера
-        clientName: _clientName, // Получить имя клиента
+        masterName: _masterName,
+        clientName: _clientName,
+      );
+
+      final added = await CalendarService.instance.addBookingToCalendar(
+        title: 'Запись: ${widget.serviceName}',
+        description: description,
+        startDate: booking.startTime,
+        endDate: booking.endTime,
+        reminderDuration: const Duration(hours: 1),
       );
 
       if (added) {
@@ -696,18 +699,14 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
 
   Future<Map<String, dynamic>> _getServiceDetails(String serviceId) async {
     final supabase = Supabase.instance.client;
-    final response = await supabase
-        .from('services')
-        .select('''
+    final response = await supabase.from('services').select('''
           id,
           master_id,
           name,
           duration_minutes,
           price,
           profiles!services_master_id_fkey(organization_id, full_name)
-        ''')
-        .eq('id', serviceId)
-        .single();
+        ''').eq('id', serviceId).single();
 
     return {
       'id': response['id'] as String,

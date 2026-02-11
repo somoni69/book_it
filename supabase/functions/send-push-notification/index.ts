@@ -1,12 +1,10 @@
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-console.log('🚀 Функция send-push-notification запущена')
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -15,121 +13,102 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id, title, body, screen, data } = await req.json()
+    const { booking_id, client_id, title, body, data } = await req.json()
 
-    console.log('📨 Получен запрос на отправку push:', {
-      user_id,
-      title,
-      body,
-      screen,
-      data,
-      timestamp: new Date().toISOString(),
-    })
+    // Validate required fields
+    if (!booking_id || !client_id) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    // Создаем клиент Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '', 
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    )
 
-    // Получаем FCM токен пользователя
-    const { data: tokenData, error: tokenError } = await supabaseClient
+    // Get client's FCM token
+    const { data: fcmData, error: fcmError } = await supabaseClient
       .from('user_fcm_tokens')
       .select('fcm_token')
-      .eq('user_id', user_id)
+      .eq('user_id', client_id)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .single()
 
-    if (tokenError) {
-      console.error('❌ Ошибка получения токена:', tokenError)
-      throw tokenError
-    }
-
-    if (!tokenData || !tokenData.fcm_token) {
-      console.log('ℹ️ FCM токен не найден для пользователя:', user_id)
+    if (fcmError || !fcmData) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'FCM token not found',
-          user_id,
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404,
-        }
+        JSON.stringify({ error: 'FCM token not found', details: fcmError }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const fcmToken = tokenData.fcm_token
-    console.log('✅ Найден FCM токен:', fcmToken.substring(0, 20) + '...')
+    const fcmToken = fcmData.fcm_token
 
-    // Здесь будет реальная отправка через FCM
-    // Пока просто логируем
-    
-    const fcmServerKey = Deno.env.get('FIREBASE_SERVER_KEY')
-    
-    if (!fcmServerKey) {
-      console.log('⚠️ FIREBASE_SERVER_KEY не настроен, пропускаем отправку')
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Уведомление зарегистрировано (реальная отправка требует настройки FCM)',
-          debug: {
-            user_id,
-            has_fcm_token: true,
-            title,
-            body,
-          }
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      )
-    }
+    // Send push notification via Firebase
+    const firebaseResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `key=${Deno.env.get('FIREBASE_SERVER_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: fcmToken,
+        notification: {
+          title: title || 'Напоминание о записи',
+          body: body || 'У вас скоро запись',
+          sound: 'default',
+        },
+        data: {
+          ...data,
+          booking_id,
+          screen: 'booking_details',
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+        android: {
+          priority: 'high',
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
+      }),
+    })
 
-    // TODO: Реальная отправка через FCM API
-    // const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `key=${fcmServerKey}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     to: fcmToken,
-    //     notification: { title, body },
-    //     data: { screen, ...data },
-    //   }),
-    // })
+    const firebaseResult = await firebaseResponse.json()
+
+    // Log the notification in database
+    await supabaseClient.from('notification_logs').insert({
+      booking_id,
+      client_id,
+      fcm_token: fcmToken,
+      title,
+      body,
+      sent_at: new Date().toISOString(),
+      success: firebaseResult.success === 1,
+      response: firebaseResult,
+    })
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Уведомление отправлено (заглушка)',
-        notification: { title, body },
-        user_id,
+        message: 'Notification sent',
+        firebase_response: firebaseResult,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('❌ Ошибка в функции:', error)
-    
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack 
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

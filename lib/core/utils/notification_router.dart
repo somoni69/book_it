@@ -1,69 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../app/router.dart';
 
 class NotificationRouter {
   static final NotificationRouter _instance = NotificationRouter._internal();
   factory NotificationRouter() => _instance;
   NotificationRouter._internal();
 
-  static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
-
   void navigateToScreen(String? screen, Map<String, dynamic> data) {
-    if (screen == null || navigatorKey.currentContext == null) return;
+    final context = rootNavigatorKey.currentContext;
+    if (context == null || screen == null) {
+      debugPrint('❌ Navigator context не доступен');
+      return;
+    }
 
-    final context = navigatorKey.currentContext!;
+    final id = data['id'] as String?;
 
     switch (screen) {
       case 'booking_details':
-        final bookingId = data['booking_id'] as String?;
-        if (bookingId != null) {
-          _navigateToBookingDetails(context, bookingId);
+        if (id != null) {
+          context.go('/booking/$id');
+        } else {
+          context.go('/today');
         }
         break;
 
-      case 'master_journal':
-        _navigateToMasterJournal(context);
+      case 'today_bookings':
+        context.go('/today');
         break;
 
-      case 'today_bookings':
-        _navigateToTodayBookings(context);
+      case 'master_journal':
+      case 'journal':
+        context.go('/journal');
         break;
 
       case 'reviews':
-        _navigateToReviews(context);
+        debugPrint('Navigate to reviews - в разработке');
         break;
 
       case 'profile':
-        _navigateToProfile(context);
+        debugPrint('Navigate to profile - в разработке');
         break;
 
       default:
-        debugPrint('Unknown notification screen: $screen');
+        context.go('/master');
+        debugPrint('Unknown notification screen: $screen, going to /master');
     }
-  }
-
-  void _navigateToBookingDetails(BuildContext context, String bookingId) {
-    // TODO: Navigate to booking details screen
-    debugPrint('Navigate to booking details: $bookingId');
-  }
-
-  void _navigateToMasterJournal(BuildContext context) {
-    // TODO: Navigate to master journal
-    debugPrint('Navigate to master journal');
-  }
-
-  void _navigateToTodayBookings(BuildContext context) {
-    // TODO: Navigate to today bookings
-    debugPrint('Navigate to today bookings');
-  }
-
-  void _navigateToReviews(BuildContext context) {
-    // TODO: Navigate to reviews
-    debugPrint('Navigate to reviews');
-  }
-
-  void _navigateToProfile(BuildContext context) {
-    // TODO: Navigate to profile
-    debugPrint('Navigate to profile');
   }
 }

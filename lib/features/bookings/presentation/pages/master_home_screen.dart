@@ -7,8 +7,13 @@ import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
 import '../../data/repositories/service_repository_impl.dart';
 import '../../domain/entities/booking_entity.dart';
+import 'package:book_it/core/services/calendar_service.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
+import '../bloc/create_booking_bloc.dart';
+import 'create_booking_screen.dart';
+import '../bloc/reminders_bloc.dart';
+import 'reminders_management_screen.dart';
 import 'master_journal_page.dart';
 import 'master_services_page.dart';
 import 'master_today_bookings_screen.dart';
@@ -456,10 +461,20 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
                 label: 'Новая запись',
                 color: Colors.blue,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Создание записи - в разработке')),
-                  );
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId != null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                          create: (context) => CreateBookingBloc(
+                            supabase: Supabase.instance.client,
+                            masterId: userId,
+                          )..add(LoadInitialData(userId)),
+                          child: const CreateBookingScreen(),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -479,9 +494,19 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
                 label: 'Напоминания',
                 color: Colors.orange,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Напоминания - в разработке')),
-                  );
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId != null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                          create: (context) => RemindersBloc(
+                            supabase: Supabase.instance.client,
+                          ),
+                          child: RemindersManagementScreen(masterId: userId),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -598,41 +623,96 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 4,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      booking.clientName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      timeLabel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: statusColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.clientName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timeLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: statusColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.calendar_today,
+                        size: 20, color: Colors.blue),
+                    onPressed: () async {
+                      final description =
+                          CalendarService.instance.buildBookingDescription(
+                        serviceName: 'Услуга',
+                        masterName: _masterName,
+                        clientName: booking.clientName,
+                        notes: booking.comment,
+                      );
+
+                      final success =
+                          await CalendarService.instance.addBookingToCalendar(
+                        title: 'Запись: ${booking.clientName}',
+                        description: description,
+                        startDate: booking.startTime,
+                        endDate: booking.endTime,
+                        reminderDuration: const Duration(hours: 1),
+                      );
+
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Запись ${booking.clientName} добавлена в календарь 📅'),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    },
+                    tooltip: 'Добавить в календарь',
+                  ),
+                  Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
+                ],
               ),
-              Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
+              if (booking.status != BookingStatus.completed)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        _statusToText(booking.status),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -706,6 +786,19 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
       return 'записи';
     } else {
       return 'записей';
+    }
+  }
+
+  String _statusToText(BookingStatus status) {
+    switch (status) {
+      case BookingStatus.pending:
+        return 'Ожидание';
+      case BookingStatus.confirmed:
+        return 'Подтверждена';
+      case BookingStatus.cancelled:
+        return 'Отменена';
+      case BookingStatus.completed:
+        return 'Завершена';
     }
   }
 }

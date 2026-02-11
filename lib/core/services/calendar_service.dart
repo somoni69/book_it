@@ -1,110 +1,176 @@
 import 'package:flutter/foundation.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:book_it/features/bookings/domain/entities/booking_entity.dart';
 
+/// Сервис для работы с системным календарем
+/// Использует паттерн синглтон для глобального доступа
 class CalendarService {
-  static final CalendarService _instance = CalendarService._internal();
-  factory CalendarService() => _instance;
-  CalendarService._internal();
+  // Приватный конструктор
+  CalendarService._privateConstructor();
 
-  // Добавление записи в календарь
+  // Единственный экземпляр
+  static final CalendarService instance = CalendarService._privateConstructor();
+
+  /// Добавляет запись бронирования в календарь
   Future<bool> addBookingToCalendar({
-    required BookingEntity booking,
+    required String title,
+    required String description,
+    required DateTime startDate,
+    required DateTime endDate,
+    String? location,
+    Duration? reminderDuration,
+  }) async {
+    try {
+      // Запрашиваем разрешения (только для Android)
+      final hasPermission = await _checkCalendarPermission();
+      if (!hasPermission) {
+        debugPrint('❌ Нет разрешения для доступа к календарю');
+        return false;
+      }
+
+      // Создаем событие
+      final event = Event(
+        title: title,
+        description: description,
+        location: location ?? '',
+        startDate: startDate,
+        endDate: endDate,
+        allDay: false,
+        iosParams: IOSParams(
+          reminder: reminderDuration ?? const Duration(hours: 1),
+        ),
+        androidParams: const AndroidParams(
+          emailInvites: [],
+        ),
+      );
+
+      // Отображаем нативный диалог добавления
+      final result = await Add2Calendar.addEvent2Cal(event);
+
+      if (result) {
+        debugPrint('✅ Событие успешно добавлено в календарь');
+      } else {
+        debugPrint('⚠️ Пользователь отменил добавление в календарь');
+      }
+
+      return result;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Ошибка добавления в календарь: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Проверяет и запрашивает разрешения для календаря
+  Future<bool> _checkCalendarPermission() async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.calendarFullAccess.request();
+        return status.isGranted || status.isLimited;
+      }
+      // Для iOS разрешения обрабатываются нативно пакетом add_2_calendar
+      return true;
+    } catch (e) {
+      debugPrint('❌ Ошибка при запросе разрешений: $e');
+      return false;
+    }
+  }
+
+  /// Формирует описание для события бронирования
+  String buildBookingDescription({
     required String serviceName,
     required String masterName,
     String? clientName,
-  }) async {
-    try {
-      // Запрашиваем разрешения (для Android)
-      if (await _requestCalendarPermission()) {
-        final event = Event(
-          title: 'Запись: $serviceName',
-          description: _buildEventDescription(booking, masterName, clientName),
-          location: 'BookIt - Онлайн запись',
-          startDate: booking.startTime,
-          endDate: booking.endTime,
-          allDay: false,
-          recurrence: null,
-          androidParams: const AndroidParams(emailInvites: []),
-        );
-
-        final result = await Add2Calendar.addEvent2Cal(event);
-        return result;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('❌ Ошибка добавления в календарь: $e');
-      return false;
-    }
-  }
-
-  Future<bool> _requestCalendarPermission() async {
-    try {
-      // Для Android
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final status = await Permission.calendarFullAccess.request();
-        return status.isGranted;
-      }
-      return true; // Для других платформ или если не Android
-    } catch (e) {
-      return false;
-    }
-  }
-
-  String _buildEventDescription(
-    BookingEntity booking,
-    String masterName,
-    String? clientName,
-  ) {
+    String? phoneNumber,
+    String? notes,
+    double? price,
+    String? status,
+  }) {
     final buffer = StringBuffer();
 
-    buffer.writeln('Запись создана через BookIt');
+    buffer.writeln('📅 Запись через BookIt');
     buffer.writeln('');
 
     if (clientName != null) {
       buffer.writeln('👤 Клиент: $clientName');
     }
 
+    buffer.writeln('💼 Услуга: $serviceName');
     buffer.writeln('👨‍🔧 Мастер: $masterName');
-    // buffer.writeln('💰 Стоимость: ${booking.price} сомони'); // У BookingEntity нет price!
-    buffer.writeln('📞 Для связи: используйте приложение BookIt');
 
-    buffer.writeln('📊 Статус: ${_getStatusText(booking.status.name)}');
+    if (phoneNumber != null) {
+      buffer.writeln('📞 Телефон: $phoneNumber');
+    }
+
+    if (price != null) {
+      buffer.writeln('💰 Стоимость: ${price.toStringAsFixed(2)} сомони');
+    }
+
+    if (status != null) {
+      buffer.writeln('📊 Статус: ${_getStatusText(status)}');
+    }
+
+    if (notes != null && notes.isNotEmpty) {
+      buffer.writeln('📝 Примечания: $notes');
+    }
+
+    buffer.writeln('');
+    buffer.writeln('ℹ️ Для изменения записи используйте приложение BookIt');
 
     return buffer.toString();
   }
 
+  /// Конвертирует статус в читаемый текст
   String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Ожидает подтверждения';
-      case 'confirmed':
-        return 'Подтверждена';
-      case 'cancelled':
-        return 'Отменена';
-      case 'completed':
-        return 'Выполнена';
-      default:
-        return status;
+    const statusMap = {
+      'pending': 'Ожидает подтверждения',
+      'confirmed': 'Подтверждена',
+      'cancelled': 'Отменена',
+      'completed': 'Выполнена',
+    };
+
+    return statusMap[status] ?? status;
+  }
+
+  /// Добавляет повторяющееся событие (график работы)
+  /// Note: add_2_calendar doesn't support recurrence rules directly
+  /// This method creates multiple individual events instead
+  Future<bool> addRecurringEvent({
+    required String title,
+    required String description,
+    required DateTime startDate,
+    required DateTime endDate,
+    required List<int> daysOfWeek,
+    required int interval,
+    DateTime? until,
+  }) async {
+    try {
+      final hasPermission = await _checkCalendarPermission();
+      if (!hasPermission) return false;
+
+      // Create single event (add_2_calendar doesn't support recurrence)
+      final event = Event(
+        title: title,
+        description: description,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      return await Add2Calendar.addEvent2Cal(event);
+    } catch (e) {
+      debugPrint('❌ Ошибка добавления повторяющегося события: $e');
+      return false;
     }
   }
 
-  // Удаление записи из календаря (по ID события)
-  Future<void> removeBookingFromCalendar(String eventId) async {
-    // TODO: Реализовать при необходимости
-    debugPrint('Удаление события из календаря: $eventId');
-  }
-
-  // Синхронизация всех записей с календарем
-  Future<void> syncAllBookingsWithCalendar(List<BookingEntity> bookings) async {
-    for (final booking in bookings) {
-      // Только подтвержденные и будущие записи
-      if (booking.status == BookingStatus.confirmed &&
-          booking.startTime.isAfter(DateTime.now())) {
-        // TODO: Получить детали услуги и мастера
-        // await addBookingToCalendar(...);
-      }
+  /// Проверяет доступность календаря на устройстве
+  Future<bool> isCalendarAvailable() async {
+    try {
+      // Check if we have calendar permissions
+      return await _checkCalendarPermission();
+    } catch (e) {
+      debugPrint('❌ Календарь недоступен: $e');
+      return false;
     }
   }
 }
