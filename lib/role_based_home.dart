@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/presentation/pages/master_setup_page.dart';
-import 'features/bookings/presentation/pages/categories_page.dart';
+import 'home_wrapper.dart';
 import 'features/bookings/presentation/pages/master_home_screen.dart';
 
 class RoleBasedHome extends StatefulWidget {
@@ -27,19 +27,17 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
   Future<void> _checkRole() async {
     try {
       final repo = AuthRepositoryImpl(Supabase.instance.client);
-      // Пытаемся получить профиль
       final profile = await repo.getUserProfile();
 
       if (mounted) {
         setState(() {
-          _role = profile['role'];
+          _role = profile['role'] ?? 'client';
           _specialtyId = profile['specialty_id'];
           _isLoading = false;
         });
       }
     } catch (e) {
-      // ФОЛБЕК: Если ошибка, считаем клиентом и пускаем в приложение
-      // чтобы не видеть вечную загрузку
+      // ФОЛБЕК: Если ошибка, считаем клиентом
       if (mounted) {
         setState(() {
           _role = 'client';
@@ -51,23 +49,53 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    // Плавный переход от экрана загрузки к основному приложению
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: _isLoading ? _buildLoadingScreen() : _buildHomeScreen(),
+    );
+  }
 
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      key: const ValueKey('loading_screen'),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                  color: Colors.blue.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.auto_awesome_rounded,
+                  size: 64, color: Colors.blue.shade600),
+            ),
+            const SizedBox(height: 32),
+            const CircularProgressIndicator(strokeWidth: 3),
+            const SizedBox(height: 16),
+            Text(
+              'Настраиваем рабочее пространство...',
+              style: TextStyle(
+                  color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeScreen() {
     // ЛОГИКА ВЫБОРА ЭКРАНА
-
     if (_role == 'master') {
-      // Проверка: Мастер без специальности -> Настройка
       if (_specialtyId == null) {
-        return const MasterSetupPage();
+        return const MasterSetupPage(key: ValueKey('master_setup'));
       }
-
-      // Мастер с заполненной специальностью -> Главный экран мастера
-      return const MasterHomeScreen();
+      return const MasterHomeScreen(key: ValueKey('master_home'));
     } else {
-      // КЛИЕНТ
-      return const CategoriesPage();
+      // БЫЛО: return const CategoriesPage(key: ValueKey('client_home'));
+      // СТАЛО:
+      return const HomeWrapper(key: ValueKey('client_home'));
     }
   }
 }

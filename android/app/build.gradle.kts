@@ -32,6 +32,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        
+        manifestPlaceholders["appAuthRedirectScheme"] = applicationId!!
     }
 
     buildTypes {

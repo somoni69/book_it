@@ -24,6 +24,7 @@ class CreateBookingDataLoaded extends CreateBookingState {
   final TimeOfDay? selectedTime;
   final String? comment;
   final List<DateTime> busySlots;
+  final bool addToGoogleCalendar;
 
   const CreateBookingDataLoaded({
     required this.clients,
@@ -38,6 +39,7 @@ class CreateBookingDataLoaded extends CreateBookingState {
     this.selectedTime,
     this.comment = '',
     this.busySlots = const [],
+    this.addToGoogleCalendar = true,
   });
 
   CreateBookingDataLoaded copyWith({
@@ -53,6 +55,7 @@ class CreateBookingDataLoaded extends CreateBookingState {
     TimeOfDay? selectedTime,
     String? comment,
     List<DateTime>? busySlots,
+    bool? addToGoogleCalendar,
   }) {
     return CreateBookingDataLoaded(
       clients: clients ?? this.clients,
@@ -68,6 +71,7 @@ class CreateBookingDataLoaded extends CreateBookingState {
       selectedTime: selectedTime ?? this.selectedTime,
       comment: comment ?? this.comment,
       busySlots: busySlots ?? this.busySlots,
+      addToGoogleCalendar: addToGoogleCalendar ?? this.addToGoogleCalendar,
     );
   }
 
@@ -108,6 +112,7 @@ class CreateBookingDataLoaded extends CreateBookingState {
         selectedTime ?? const TimeOfDay(hour: 0, minute: 0),
         comment ?? '',
         busySlots,
+        addToGoogleCalendar,
       ];
 }
 

@@ -3,22 +3,19 @@ import '../models/booking_model.dart';
 
 abstract class BookingRemoteDataSource {
   Future<List<BookingModel>> getBookings(String masterId, DateTime date);
+  Future<List<BookingModel>> getClientBookings(String clientId);
   Future<BookingModel> createBooking(Map<String, dynamic> bookingData);
   Future<void> deleteBooking(String id);
   Future<void> updateBookingStatus(String id, String status);
 
-  // Expose supabase client for direct access (as requested)
   SupabaseClient get supabase;
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
+  @override
   final SupabaseClient supabase;
 
   BookingRemoteDataSourceImpl(this.supabase);
-
-  // Временно хардкодим ID организации
-  final String _hardcodedOrganizationId =
-      'd5d6cd49-d1d4-4372-971f-1d497bdb6c0e'; // Replace with real UUID
 
   @override
   Future<List<BookingModel>> getBookings(String masterId, DateTime date) async {
@@ -27,9 +24,12 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
 
     final response = await supabase
         .from('bookings')
-        .select('*, client_profile:profiles!bookings_client_id_fkey(full_name)')
+        .select('''
+          *,
+          client_profile:profiles!bookings_client_id_fkey(full_name),
+          service_details:services!bookings_service_id_fkey(title)
+        ''')
         .eq('master_id', masterId)
-        .eq('organization_id', _hardcodedOrganizationId)
         .gte('start_time', startOfDate.toIso8601String())
         .lt('start_time', endOfDate.toIso8601String())
         .order('start_time', ascending: true);
@@ -40,14 +40,22 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   }
 
   @override
-  Future<BookingModel> createBooking(Map<String, dynamic> bookingData) async {
-    // УДАЛИЛИ ХАРДКОД ОТСЮДА. Теперь мы доверяем тому, что пришло в bookingData
+  Future<List<BookingModel>> getClientBookings(String clientId) async {
+    final response = await supabase.from('bookings').select('''
+          *,
+          master_profile:profiles!bookings_master_id_fkey(full_name),
+          service_details:services!bookings_service_id_fkey(title)
+        ''').eq('client_id', clientId).order('start_time', ascending: false);
 
-    final response = await supabase
-        .from('bookings')
-        .insert(bookingData)
-        .select()
-        .single();
+    return (response as List)
+        .map((json) => BookingModel.fromJson(json))
+        .toList();
+  }
+
+  @override
+  Future<BookingModel> createBooking(Map<String, dynamic> bookingData) async {
+    final response =
+        await supabase.from('bookings').insert(bookingData).select().single();
 
     return BookingModel.fromJson(response);
   }

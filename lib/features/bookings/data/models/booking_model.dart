@@ -98,25 +98,28 @@ class BookingModel {
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
-      id: json['id'] as String,
-      clientId: json['client_id'] as String,
-      masterId: json['master_id'] as String,
-      serviceId: json['service_id'] as String,
-      startTime: DateTime.parse(json['start_time'] as String),
-      endTime: DateTime.parse(json['end_time'] as String),
-      status: json['status'] as String,
-      price: (json['price'] as num).toDouble(),
-      currency: json['currency'] as String,
+      id: json['id']?.toString() ?? '',
+      clientId: json['client_id']?.toString() ?? '',
+      masterId: json['master_id']?.toString() ?? '',
+      serviceId: json['service_id']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
+      currency: json['currency']?.toString() ?? 'TJS',
+      organizationId: json['organization_id']?.toString(),
+      comment: json['comment']?.toString(),
+      startTime: json['start_time'] != null
+          ? DateTime.parse(json['start_time'].toString())
+          : DateTime.now(),
+      endTime: json['end_time'] != null
+          ? DateTime.parse(json['end_time'].toString())
+          : DateTime.now(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
-      comment: json['comment'] as String?,
-      rating:
-          json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      price: (json['price_som'] as num?)?.toDouble() ?? 0.0,
+      rating: (json['rating'] as num?)?.toDouble(),
       clientProfile: json['client_profile'] as Map<String, dynamic>?,
       masterProfile: json['master_profile'] as Map<String, dynamic>?,
       serviceDetails: json['service_details'] as Map<String, dynamic>?,
-      organizationId: json['organization_id'] as String?,
     );
   }
 
@@ -150,6 +153,7 @@ class BookingModel {
       comment: comment,
       clientName: clientProfile?['full_name'] as String? ?? 'Аноним',
       masterName: masterProfile?['full_name'] as String? ?? 'Мастер',
+      serviceName: serviceDetails?['title'] as String? ?? 'Услуга',
     );
   }
 

@@ -49,12 +49,12 @@ class BookingLoaded extends BookingState {
 
   @override
   List<Object?> get props => [
-    bookings,
-    slots,
-    selectedDate,
-    selectedSlot,
-    submissionStatus,
-  ];
+        bookings,
+        slots,
+        selectedDate,
+        selectedSlot,
+        submissionStatus,
+      ];
 }
 
 class BookingError extends BookingState {

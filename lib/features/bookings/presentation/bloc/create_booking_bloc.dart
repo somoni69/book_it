@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:equatable/equatable.dart';
+import 'package:book_it/core/services/google_calendar_api_service.dart';
 
 part 'create_booking_event.dart';
 part 'create_booking_state.dart';
@@ -19,6 +20,7 @@ class CreateBookingBloc extends Bloc<CreateBookingEvent, CreateBookingState> {
     on<ServiceSelected>(_onServiceSelected);
     on<DateTimeSelected>(_onDateTimeSelected);
     on<CommentChanged>(_onCommentChanged);
+    on<GoogleCalendarToggleChanged>(_onGoogleCalendarToggleChanged);
     on<SubmitBooking>(_onSubmitBooking);
     on<ResetForm>(_onResetForm);
   }
@@ -40,7 +42,7 @@ class CreateBookingBloc extends Bloc<CreateBookingEvent, CreateBookingState> {
       // Загружаем услуги текущего мастера
       final servicesResponse = await supabase
           .from('services')
-          .select('id, name, duration_minutes, price_som')
+          .select('id, name, duration_min, price_som')
           .eq('master_id', masterId)
           .eq('is_active', true)
           .order('name');
@@ -58,7 +60,7 @@ class CreateBookingBloc extends Bloc<CreateBookingEvent, CreateBookingState> {
           .map((s) => {
                 'id': s['id'] as String,
                 'name': s['name'] as String,
-                'duration': s['duration_minutes'] as int,
+                'duration': s['duration_min'] as int,
                 'price': s['price_som'] as int,
               })
           .toList();
@@ -189,11 +191,76 @@ class CreateBookingBloc extends Bloc<CreateBookingEvent, CreateBookingState> {
 
       final newBookingId = (response as List).first['id'] as String;
 
-      // TODO: Здесь можно отправить уведомление клиенту через FCM
+      // Синхронизируем с Google Calendar если включено
+      if (event.addToGoogleCalendar) {
+        await _addToGoogleCalendarIfEnabled(
+          bookingId: newBookingId,
+          masterId: masterId,
+          clientName: currentState.selectedClientName!,
+          serviceName: currentState.selectedServiceName!,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          comment: currentState.comment,
+        );
+      }
 
       emit(CreateBookingSuccess(newBookingId));
     } catch (e) {
       emit(CreateBookingError('Ошибка создания записи: $e'));
+    }
+  }
+
+  Future<void> _addToGoogleCalendarIfEnabled({
+    required String bookingId,
+    required String masterId,
+    required String clientName,
+    required String serviceName,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? comment,
+  }) async {
+    try {
+      // 1. Проверяем, подключён ли Google аккаунт у мастера
+      final integration = await supabase
+          .from('master_integrations')
+          .select('google_email')
+          .eq('master_id', masterId)
+          .maybeSingle();
+
+      if (integration == null || integration['google_email'] == null) {
+        return; // синхронизация не включена
+      }
+
+      // 2. Создаём событие в Google Calendar
+      final eventId = await GoogleCalendarApiService.createEvent(
+        summary: 'BookIt: $serviceName — $clientName',
+        description:
+            'Клиент: $clientName\nУслуга: $serviceName\n${comment ?? ''}',
+        startTime: startTime,
+        endTime: endTime,
+        location: 'Салон',
+      );
+
+      // 3. Сохраняем google_event_id в таблицу bookings
+      if (eventId != null) {
+        await supabase
+            .from('bookings')
+            .update({'google_event_id': eventId}).eq('id', bookingId);
+      }
+    } catch (e) {
+      // Ошибка не должна ломать создание записи — просто логируем
+      print('❌ Google Calendar sync error: $e');
+    }
+  }
+
+  void _onGoogleCalendarToggleChanged(
+    GoogleCalendarToggleChanged event,
+    Emitter<CreateBookingState> emit,
+  ) {
+    if (state is CreateBookingDataLoaded) {
+      final currentState = state as CreateBookingDataLoaded;
+      emit(currentState.copyWith(
+          addToGoogleCalendar: event.addToGoogleCalendar));
     }
   }
 

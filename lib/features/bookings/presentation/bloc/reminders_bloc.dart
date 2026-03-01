@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:equatable/equatable.dart';
 
 part 'reminders_event.dart';
@@ -52,7 +51,7 @@ class RemindersBloc extends Bloc<RemindersEvent, RemindersState> {
       final now = DateTime.now();
       final sevenDaysLater = now.add(const Duration(days: 7));
 
-      // Загружаем предстоящие записи
+      // ШАГ 1: Загружаем записи БЕЗ токенов (и фиксим name на title для services)
       final response = await supabase
           .from('bookings')
           .select('''
@@ -64,8 +63,7 @@ class RemindersBloc extends Bloc<RemindersEvent, RemindersState> {
             client_id,
             service_id,
             client_profile:profiles!bookings_client_id_fkey(full_name, avatar_url),
-            service:services(name, duration_minutes),
-            fcm_token:user_fcm_tokens(fcm_token)
+            service:services(title, duration_min) 
           ''')
           .eq('master_id', masterId)
           .gte('start_time', now.toIso8601String())
@@ -73,29 +71,49 @@ class RemindersBloc extends Bloc<RemindersEvent, RemindersState> {
           .or('status.eq.pending,status.eq.confirmed')
           .order('start_time', ascending: true);
 
-      final bookings = (response as List).map((booking) {
+      final rawBookings = response as List;
+
+      // ШАГ 2: Собираем уникальные ID всех клиентов из этих записей
+      final clientIds =
+          rawBookings.map((b) => b['client_id'] as String).toSet().toList();
+
+      // ШАГ 3: Запрашиваем FCM токены только для нужных клиентов
+      Map<String, String> clientTokens = {};
+      if (clientIds.isNotEmpty) {
+        final tokensResponse = await supabase
+            .from('user_fcm_tokens')
+            .select('user_id, fcm_token')
+            .inFilter('user_id', clientIds);
+
+        for (var row in tokensResponse as List) {
+          clientTokens[row['user_id'] as String] = row['fcm_token'] as String;
+        }
+      }
+
+      // ШАГ 4: Собираем финальный пазл данных
+      final bookings = rawBookings.map((booking) {
+        final clientId = booking['client_id'] as String;
         final clientProfile = booking['client_profile'] ?? {};
         final service = booking['service'] ?? {};
-        final fcmTokens = booking['fcm_token'] as List?;
 
         return {
           'id': booking['id'] as String,
           'start_time': DateTime.parse(booking['start_time'] as String),
           'end_time': DateTime.parse(booking['end_time'] as String),
-          'client_id': booking['client_id'] as String,
+          'client_id': clientId,
           'client_name': clientProfile['full_name'] as String? ?? 'Клиент',
           'client_avatar': clientProfile['avatar_url'] as String?,
-          'service_name': service['name'] as String? ?? 'Услуга',
-          'duration': service['duration_minutes'] as int? ?? 60,
+          'service_name': service['title'] as String? ??
+              service['name'] as String? ??
+              'Услуга',
+          'duration': service['duration_min'] as int? ?? 60,
           'comment': booking['comment'] as String?,
           'status': booking['status'] as String,
-          'fcm_token': fcmTokens?.isNotEmpty == true
-              ? fcmTokens!.first['fcm_token'] as String?
-              : null,
+          'fcm_token': clientTokens[clientId],
         };
       }).toList();
 
-      // Загружаем предыдущие статусы напоминаний из локального хранилища
+      // Загружаем начальные статусы напоминаний
       final Map<String, ReminderStatus> statuses = {};
       for (final booking in bookings) {
         statuses[booking['id'] as String] = ReminderStatus.pending;

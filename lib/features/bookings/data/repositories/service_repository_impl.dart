@@ -40,11 +40,8 @@ class ServiceRepositoryImpl implements ServiceRepository {
         'duration_min': service.durationMin,
       };
 
-      final response = await _supabaseClient
-          .from('services')
-          .insert(data)
-          .select()
-          .single();
+      final response =
+          await _supabaseClient.from('services').insert(data).select().single();
 
       return ServiceEntity.fromJson(response);
     } on PostgrestException catch (e) {

@@ -26,6 +26,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
 
+  // --- ЕДИНЫЙ СТИЛЬ ---
+  final BorderRadius _borderRadius = BorderRadius.circular(16);
+  final List<BoxShadow> _cardShadow = [
+    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 4)),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -41,13 +47,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Future<void> _submitReview() async {
     if (_isSubmitting) return;
 
-    // Валидация комментария
     if (_commentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Пожалуйста, напишите комментарий'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: const Text('Пожалуйста, напишите пару слов о визите'), backgroundColor: Colors.orange.shade600, behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -56,10 +58,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     try {
       final currentClientId = Supabase.instance.client.auth.currentUser?.id;
-
-      if (currentClientId == null) {
-        throw Exception('Пользователь не авторизован');
-      }
+      if (currentClientId == null) throw Exception('Пользователь не авторизован');
 
       await _reviewRepo.createReview(
         bookingId: widget.bookingId,
@@ -71,226 +70,162 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Спасибо за отзыв!'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: const Text('✅ Спасибо за ваш отзыв!'), backgroundColor: Colors.green.shade600, behavior: SnackBarBehavior.floating),
         );
-        Navigator.pop(context, true); // Возвращаем true = отзыв оставлен
+        Navigator.pop(context, true); 
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Ошибка: ${e.toString()}'), backgroundColor: Colors.red.shade600, behavior: SnackBarBehavior.floating),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text(
-          'Оцените запись',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        elevation: 0,
+        title: const Text('Оставить отзыв', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 1,
+        shadowColor: Colors.black.withOpacity(0.05),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(20).copyWith(bottom: 40),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Заголовок
-            const Text(
-              'Как прошла запись?',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.celebration_rounded, size: 48, color: Colors.blue.shade400),
             ),
+            const SizedBox(height: 24),
+            const Text('Как прошел ваш визит?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87), textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text(
-              'Оцените работу ${widget.masterName}',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-
+            Text('Оцените работу мастера ${widget.masterName}', style: TextStyle(fontSize: 16, color: Colors.grey.shade600), textAlign: TextAlign.center),
             const SizedBox(height: 32),
 
-            // Услуга
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.work_outline,
-                      color: Color(0xFF4A6EF6),
-                      size: 24,
+            // Карточка услуги
+            Container(
+              decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius, boxShadow: _cardShadow, border: Border.all(color: Colors.grey.shade100)),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.content_cut_rounded, color: Colors.blue.shade600, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 14, color: Colors.green.shade500),
+                            const SizedBox(width: 4),
+                            Text('Услуга завершена', style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.serviceName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Завершенная услуга',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-
             const SizedBox(height: 40),
 
-            // Звезды рейтинга
-            const Text(
-              'Ваша оценка:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            // Выбор звезд
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) {
+                final starIndex = index + 1;
+                final isSelected = starIndex <= _selectedRating;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedRating = starIndex),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 52,
+                      color: isSelected ? Colors.amber.shade400 : Colors.grey.shade300,
+                    ),
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 16),
-
-            Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  final starIndex = index + 1;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedRating = starIndex;
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(
-                        starIndex <= _selectedRating
-                            ? Icons.star
-                            : Icons.star_border,
-                        size: 48,
-                        color: starIndex <= _selectedRating
-                            ? Colors.amber
-                            : Colors.grey[300],
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Center(
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
               child: Text(
                 _getRatingText(_selectedRating),
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                  fontStyle: FontStyle.italic,
-                ),
+                key: ValueKey<int>(_selectedRating),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _getRatingColor(_selectedRating)),
               ),
             ),
-
             const SizedBox(height: 40),
 
-            // Комментарий
-            const Text(
-              'Комментарий:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            // Поле комментария
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Ваш комментарий', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: _commentController,
               maxLines: 4,
               maxLength: 500,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                hintText: 'Расскажите о вашем опыте...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF4A6EF6),
-                    width: 2,
-                  ),
-                ),
-                counterText: '',
+                hintText: 'Расскажите, что понравилось больше всего...',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                filled: true,
+                fillColor: Colors.white,
+                counterStyle: TextStyle(color: Colors.grey.shade500),
+                enabledBorder: OutlineInputBorder(borderRadius: _borderRadius, borderSide: BorderSide(color: Colors.grey.shade200)),
+                focusedBorder: OutlineInputBorder(borderRadius: _borderRadius, borderSide: BorderSide(color: Colors.blue.shade400, width: 2)),
               ),
             ),
+            const SizedBox(height: 32),
 
-            const SizedBox(height: 40),
-
-            // Кнопка отправки
+            // Кнопки
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitReview,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A6EF6),
-                  disabledBackgroundColor: Colors.grey[300],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 2,
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.blue.shade300,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 4,
+                  shadowColor: Colors.blue.withOpacity(0.4),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Отправить отзыв',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Отправить отзыв', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Пропустить
-            Center(
-              child: TextButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () => Navigator.pop(context, false),
-                child: const Text(
-                  'Пропустить',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: _isSubmitting ? null : () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey.shade600),
+              child: const Text('Пропустить', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -300,18 +235,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   String _getRatingText(int rating) {
     switch (rating) {
-      case 1:
-        return 'Ужасно';
-      case 2:
-        return 'Плохо';
-      case 3:
-        return 'Нормально';
-      case 4:
-        return 'Хорошо';
-      case 5:
-        return 'Отлично!';
-      default:
-        return '';
+      case 1: return 'Ужасно 😞';
+      case 2: return 'Плохо 😕';
+      case 3: return 'Нормально 😐';
+      case 4: return 'Хорошо 🙂';
+      case 5: return 'Отлично! 😍';
+      default: return '';
     }
+  }
+
+  Color _getRatingColor(int rating) {
+    if (rating <= 2) return Colors.red.shade400;
+    if (rating == 3) return Colors.orange.shade400;
+    return Colors.green.shade500;
   }
 }

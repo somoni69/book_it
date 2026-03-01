@@ -153,9 +153,8 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       final currentState = state as BookingLoaded;
 
       // Создаем новый список без удаленного элемента
-      final updatedList = currentState.bookings
-          .where((b) => b.id != event.bookingId)
-          .toList();
+      final updatedList =
+          currentState.bookings.where((b) => b.id != event.bookingId).toList();
 
       // Эмитим новое состояние с обновленным списком
       emit(currentState.copyWith(bookings: updatedList));

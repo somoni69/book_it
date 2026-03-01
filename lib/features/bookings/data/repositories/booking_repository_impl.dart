@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/error/database_exception.dart';
+import '../../../../core/services/google_calendar_api_service.dart'; // <-- ДОБАВИЛИ ИМПОРТ
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/service_entity.dart';
 import '../../domain/entities/working_hour_entity.dart';
@@ -18,14 +19,13 @@ class BookingRepositoryImpl implements BookingRepository {
     final response = await remoteDataSource.supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
-        .eq('role', 'master'); // Ищем только мастеров
+        .eq('role', 'master');
     return List<Map<String, dynamic>>.from(response);
   }
 
   Future<List<Map<String, dynamic>>> getMastersByCategory(
     String categoryId,
   ) async {
-    // 1. Сначала узнаем ID всех специальностей в этой категории
     final specialtiesResp = await remoteDataSource.supabase
         .from('specialties')
         .select('id')
@@ -35,11 +35,10 @@ class BookingRepositoryImpl implements BookingRepository {
 
     if (specialtyIds.isEmpty) return [];
 
-    // 2. Ищем мастеров с этими специальностями
     final response = await remoteDataSource.supabase
         .from('profiles')
-        .select() // Подтянем название специальности
-        .filter('specialty_id', 'in', specialtyIds) // Фильтр IN
+        .select()
+        .filter('specialty_id', 'in', specialtyIds)
         .eq('role', 'master');
 
     return List<Map<String, dynamic>>.from(response);
@@ -60,10 +59,8 @@ class BookingRepositoryImpl implements BookingRepository {
   ) async {
     try {
       final models = await remoteDataSource.getBookings(masterId, date);
-      // Мапим модели в энтити
       return models.map((model) => model.toEntity()).toList();
     } catch (e) {
-      // Тут в реальном проекте мы бы возвращали Failure(Left)
       rethrow;
     }
   }
@@ -71,21 +68,14 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<List<BookingEntity>> getClientBookings(String clientId) async {
     try {
-      final response = await remoteDataSource.supabase
-          .from('bookings')
-          .select('''
+      final response = await remoteDataSource.supabase.from('bookings').select('''
             *,
-            services:service_id(title, duration_min, price),
-            master:profiles!bookings_master_id_fkey(id, full_name, avatar_url)
-          ''')
-          .eq('client_id', clientId)
-          .order('start_time', ascending: false);
+            service_details:services(title, duration_min, price),
+            master_profile:profiles!bookings_master_id_fkey(id, full_name, avatar_url)
+          ''').eq('client_id', clientId).order('start_time', ascending: false);
 
       return (response as List).map((json) {
-        // Создаем модель из JSON
         final model = BookingModel.fromJson(json);
-
-        // Конвертируем в entity
         return model.toEntity();
       }).toList();
     } catch (e) {
@@ -101,17 +91,13 @@ class BookingRepositoryImpl implements BookingRepository {
     String? comment,
   }) async {
     try {
-      // 1. Рассчитываем время окончания (пока хардкод 60 минут)
       final endTime = startTime.add(const Duration(minutes: 60));
-
-      // 1. ПОЛУЧАЕМ РЕАЛЬНОГО ЮЗЕРА
       final user = Supabase.instance.client.auth.currentUser;
 
       if (user == null) {
         throw Exception("Вы не авторизованы!");
       }
 
-      // 2. Хардкод ОРГАНИЗАЦИИ пока оставляем (выбор салона будет позже)
       const organizationId = 'd5d6cd49-d1d4-4372-971f-1d497bdb6c0e';
 
       final bookingData = {
@@ -121,14 +107,14 @@ class BookingRepositoryImpl implements BookingRepository {
         'service_id': serviceId,
         'start_time': startTime.toIso8601String(),
         'end_time': endTime.toIso8601String(),
-        'status': 'confirmed',
+        // ИДЕАЛЬНО: Здесь статус должен быть 'pending', чтобы мастер потом подтвердил её и она улетела в календарь.
+        'status': 'confirmed', 
         'comment': comment,
       };
 
       final model = await remoteDataSource.createBooking(bookingData);
       final createdBooking = model.toEntity();
 
-      // Отправляем push уведомление мастеру
       await _sendPushNotificationToMaster(
         masterId: masterId,
         title: '📅 Новая запись!',
@@ -148,6 +134,27 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<void> cancelBooking(String bookingId) async {
     try {
+      // 1. Проверяем, есть ли гугл-событие перед удалением
+      final bookingResponse = await remoteDataSource.supabase
+          .from('bookings')
+          .select('google_event_id, master_id')
+          .eq('id', bookingId)
+          .maybeSingle();
+          
+      if (bookingResponse != null) {
+        final googleEventId = bookingResponse['google_event_id'] as String?;
+        final masterId = bookingResponse['master_id'] as String?;
+        final currentUser = remoteDataSource.supabase.auth.currentUser;
+
+        // Удаляем из календаря, если текущий юзер - это мастер этой записи
+        if (googleEventId != null && currentUser?.id == masterId) {
+          if (await GoogleCalendarApiService.isSignedIn()) {
+            await GoogleCalendarApiService.deleteEvent(googleEventId);
+          }
+        }
+      }
+
+      // 2. Удаляем саму запись из БД
       await remoteDataSource.deleteBooking(bookingId);
     } catch (e) {
       debugPrint("Error cancelling booking: $e");
@@ -162,21 +169,68 @@ class BookingRepositoryImpl implements BookingRepository {
   ) async {
     try {
       final statusStr = newStatus.name;
-      await remoteDataSource.updateBookingStatus(bookingId, statusStr);
-
-      // Получаем детали брони для уведомления
+      
+      // 1. Сначала вытаскиваем полные данные о записи (для календаря)
       final bookingResponse = await remoteDataSource.supabase
           .from('bookings')
-          .select('client_id, master_id, start_time')
+          .select('''
+            *,
+            client_profile:profiles!bookings_client_id_fkey(full_name),
+            service_details:services!bookings_service_id_fkey(title)
+          ''')
           .eq('id', bookingId)
           .single();
 
       final clientId = bookingResponse['client_id'] as String;
+      final masterId = bookingResponse['master_id'] as String;
       final startTime = DateTime.parse(bookingResponse['start_time'] as String);
+      final endTime = DateTime.parse(bookingResponse['end_time'] as String);
+      final clientName = bookingResponse['client_profile']?['full_name'] ?? 'Клиент';
+      final serviceName = bookingResponse['service_details']?['title'] ?? 'Услуга';
+      final googleEventId = bookingResponse['google_event_id'] as String?;
+      final comment = bookingResponse['comment'] as String? ?? 'Нет примечаний';
 
-      // Отправляем уведомление клиенту
+      // 2. Обновляем статус в БД
+      await remoteDataSource.updateBookingStatus(bookingId, statusStr);
+
+      // --- ИНТЕГРАЦИЯ С GOOGLE CALENDAR ---
+      final currentUser = remoteDataSource.supabase.auth.currentUser;
+      
+      // Логика работает только если на устройстве сейчас авторизован мастер
+      if (currentUser != null && currentUser.id == masterId) {
+        final isGoogleConnected = await GoogleCalendarApiService.isSignedIn();
+        
+        if (isGoogleConnected) {
+          if (newStatus == BookingStatus.confirmed && googleEventId == null) {
+            // Мастер подтвердил -> Создаем событие
+            final newEventId = await GoogleCalendarApiService.createEvent(
+              summary: 'BookIt: $serviceName ($clientName)',
+              description: 'Клиент: $clientName\nУслуга: $serviceName\nКомментарий: $comment',
+              startTime: startTime,
+              endTime: endTime,
+            );
+            
+            if (newEventId != null) {
+              await remoteDataSource.supabase
+                  .from('bookings')
+                  .update({'google_event_id': newEventId})
+                  .eq('id', bookingId);
+            }
+          } else if (newStatus == BookingStatus.cancelled && googleEventId != null) {
+            // Мастер отменил -> Удаляем событие
+            await GoogleCalendarApiService.deleteEvent(googleEventId);
+            
+            await remoteDataSource.supabase
+                .from('bookings')
+                .update({'google_event_id': null})
+                .eq('id', bookingId);
+          }
+        }
+      }
+      // ------------------------------------
+
+      // 3. Уведомления клиенту
       String title, body;
-
       switch (newStatus) {
         case BookingStatus.confirmed:
           title = '✅ Запись подтверждена';
@@ -259,7 +313,7 @@ class BookingRepositoryImpl implements BookingRepository {
     final response = await remoteDataSource.supabase
         .from('services')
         .select()
-        .eq('master_id', masterId); // Фильтруем по мастеру
+        .eq('master_id', masterId);
 
     return (response as List)
         .map((json) => ServiceEntity.fromJson(json))

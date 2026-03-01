@@ -23,7 +23,8 @@ class ServiceSelected extends CreateBookingEvent {
   final String serviceName;
   final int duration;
   final int price;
-  const ServiceSelected(this.serviceId, this.serviceName, this.duration, this.price);
+  const ServiceSelected(
+      this.serviceId, this.serviceName, this.duration, this.price);
 }
 
 class DateTimeSelected extends CreateBookingEvent {
@@ -37,8 +38,14 @@ class CommentChanged extends CreateBookingEvent {
   const CommentChanged(this.comment);
 }
 
+class GoogleCalendarToggleChanged extends CreateBookingEvent {
+  final bool addToGoogleCalendar;
+  const GoogleCalendarToggleChanged(this.addToGoogleCalendar);
+}
+
 class SubmitBooking extends CreateBookingEvent {
-  const SubmitBooking();
+  final bool addToGoogleCalendar;
+  const SubmitBooking({this.addToGoogleCalendar = true});
 }
 
 class ResetForm extends CreateBookingEvent {

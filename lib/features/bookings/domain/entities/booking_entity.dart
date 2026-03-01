@@ -12,7 +12,8 @@ class BookingEntity extends Equatable {
   final BookingStatus status;
   final String? comment;
   final String clientName;
-  final String masterName; // <--- Новое поле
+  final String masterName;
+  final String serviceName;
 
   const BookingEntity({
     required this.id,
@@ -24,7 +25,8 @@ class BookingEntity extends Equatable {
     required this.status,
     this.comment,
     this.clientName = 'Аноним',
-    this.masterName = 'Мастер', // Добавим дефолт
+    this.masterName = 'Мастер',
+    this.serviceName = 'Услуга',
   });
 
   BookingEntity copyWith({
@@ -38,6 +40,7 @@ class BookingEntity extends Equatable {
     String? comment,
     String? clientName,
     String? masterName,
+    String? serviceName,
   }) {
     return BookingEntity(
       id: id ?? this.id,
@@ -50,6 +53,7 @@ class BookingEntity extends Equatable {
       comment: comment ?? this.comment,
       clientName: clientName ?? this.clientName,
       masterName: masterName ?? this.masterName,
+      serviceName: serviceName ?? this.serviceName,
     );
   }
 
@@ -65,6 +69,7 @@ class BookingEntity extends Equatable {
       'comment': comment,
       'client_name': clientName,
       'master_name': masterName,
+      'service_name': serviceName,
     };
   }
 
@@ -83,6 +88,7 @@ class BookingEntity extends Equatable {
       comment: json['comment'] as String?,
       clientName: json['client_name'] as String? ?? 'Аноним',
       masterName: json['master_name'] as String? ?? 'Мастер',
+      serviceName: json['service_name'] as String? ?? 'Услуга',
     );
   }
 
@@ -94,6 +100,7 @@ class BookingEntity extends Equatable {
         status,
         clientName,
         masterName,
+        serviceName,
       ];
 
   // Хелпер: закончилась ли запись?
@@ -101,6 +108,6 @@ class BookingEntity extends Equatable {
 
   @override
   String toString() {
-    return 'BookingEntity(id: $id, clientName: $clientName, masterName: $masterName, status: $status)';
+    return 'BookingEntity(id: $id, clientName: $clientName, masterName: $masterName, serviceName: $serviceName, status: $status)';
   }
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'features/bookings/presentation/pages/categories_page.dart';
-import 'features/bookings/presentation/pages/master_journal_page.dart';
+
+// Подтягиваем наши новые крутые экраны с учетом новой структуры папок!
+import 'features/catalog/presentation/pages/categories_page.dart';
+import 'features/bookings/presentation/pages/client_bookings_screen.dart';
+import 'features/profile/presentation/pages/client_profile_screen.dart';
 
 class HomeWrapper extends StatefulWidget {
   const HomeWrapper({super.key});
@@ -12,30 +15,67 @@ class HomeWrapper extends StatefulWidget {
 class _HomeWrapperState extends State<HomeWrapper> {
   int _currentIndex = 0;
 
+  // Наши 3 новых экрана для клиента
   final List<Widget> _pages = [
     const CategoriesPage(),
-    const MasterJournalPage(),
+    const ClientBookingsScreen(),
+    const ClientProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Запись (Клиент)',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Журнал (Мастер)',
-          ),
-        ],
+      // AnimatedSwitcher для плавного переключения табов
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _pages[_currentIndex],
+      ),
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700);
+            }
+            return TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600);
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _currentIndex = index),
+          backgroundColor: Colors.white,
+          elevation: 10,
+          shadowColor: Colors.black.withOpacity(0.1),
+          indicatorColor: Colors.blue.shade100,
+          destinations: [
+            NavigationDestination(
+              icon: Icon(Icons.search_rounded, color: Colors.grey.shade600),
+              selectedIcon:
+                  Icon(Icons.search_rounded, color: Colors.blue.shade700),
+              label: 'Поиск',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined,
+                  color: Colors.grey.shade600),
+              selectedIcon: Icon(Icons.calendar_month_rounded,
+                  color: Colors.blue.shade700),
+              label: 'Мои записи',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded,
+                  color: Colors.grey.shade600),
+              selectedIcon:
+                  Icon(Icons.person_rounded, color: Colors.blue.shade700),
+              label: 'Профиль',
+            ),
+          ],
+        ),
       ),
     );
   }

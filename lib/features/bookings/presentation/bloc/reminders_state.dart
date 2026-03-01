@@ -2,10 +2,10 @@ part of 'reminders_bloc.dart';
 
 // Статус напоминания для отдельной записи
 enum ReminderStatus {
-  pending,    // Требует напоминания
-  sending,    // Отправляется
-  sent,       // Успешно отправлено
-  failed,     // Ошибка отправки
+  pending, // Требует напоминания
+  sending, // Отправляется
+  sent, // Успешно отправлено
+  failed, // Ошибка отправки
 }
 
 abstract class RemindersState extends Equatable {
@@ -54,7 +54,8 @@ class RemindersLoaded extends RemindersState {
 
     return upcomingBookings.where((booking) {
       final bookingTime = booking['start_time'] as DateTime;
-      final isUpcoming = bookingTime.isAfter(now) && bookingTime.isBefore(tomorrow);
+      final isUpcoming =
+          bookingTime.isAfter(now) && bookingTime.isBefore(tomorrow);
       final status = reminderStatuses[booking['id']] ?? ReminderStatus.pending;
       return isUpcoming && status != ReminderStatus.sent;
     }).toList();
@@ -62,11 +63,11 @@ class RemindersLoaded extends RemindersState {
 
   @override
   List<Object> get props => [
-    upcomingBookings,
-    reminderStatuses,
-    isSending,
-    sentCount,
-  ];
+        upcomingBookings,
+        reminderStatuses,
+        isSending,
+        sentCount,
+      ];
 }
 
 class RemindersError extends RemindersState {

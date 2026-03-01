@@ -135,8 +135,46 @@ class AuthRepositoryImpl implements AuthRepository {
 
     await supabase
         .from('profiles')
-        .update({'specialty_id': specialtyId})
-        .eq('id', userId);
+        .update({'specialty_id': specialtyId}).eq('id', userId);
+  }
+
+  // --- НОВАЯ ЕДИНАЯ ФУНКЦИЯ НАСТРОЙКИ МАСТЕРА ---
+  Future<void> completeMasterSetup(String specialtyId) async {
+    final userId = currentUserId;
+    if (userId == null) throw Exception('Пользователь не авторизован');
+
+    try {
+      // 1. Обновляем специальность и роль в профиле
+      await updateProfile(
+          profileId: userId,
+          updates: {'role': 'master', 'specialty_id': specialtyId});
+
+      // 2. Создаем организацию для мастера (если ее нет)
+      final profile = await getProfile(userId);
+      final fullName = profile['full_name'] ?? 'Специалист';
+
+      final orgResponse = await supabase
+          .from('organizations')
+          .insert({
+            'name': '$fullName Studio',
+            'owner_id': userId,
+            'type': 'individual'
+          })
+          .select('id')
+          .single();
+
+      final orgId = orgResponse['id'] as String;
+
+      // 3. Привязываем организацию к профилю
+      await updateProfile(
+          profileId: userId, updates: {'organization_id': orgId});
+
+      // 4. Создаем базовую услугу и график
+      await _createDefaultServices(userId, specialtyId, orgId);
+      await _createDefaultWorkingHours(userId);
+    } catch (e) {
+      throw Exception('Ошибка при настройке профиля специалиста: $e');
+    }
   }
 
   Future<Map<String, dynamic>> getUserProfile() async {
@@ -220,10 +258,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final userId = response.user!.id;
       await Future.delayed(const Duration(seconds: 1));
 
-      await supabase
-          .from('profiles')
-          .update({'role': 'master', 'specialty_id': specialtyId})
-          .eq('id', userId);
+      await supabase.from('profiles').update(
+          {'role': 'master', 'specialty_id': specialtyId}).eq('id', userId);
 
       final orgResponse = await supabase
           .from('organizations')
@@ -239,8 +275,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       await supabase
           .from('profiles')
-          .update({'organization_id': orgId})
-          .eq('id', userId);
+          .update({'organization_id': orgId}).eq('id', userId);
 
       await _createDefaultServices(userId, specialtyId, orgId);
       await _createDefaultWorkingHours(userId);
@@ -276,7 +311,7 @@ class AuthRepositoryImpl implements AuthRepository {
         'master_id': masterId,
         'organization_id': orgId,
         'name': service['name'],
-        'duration_minutes': service['duration_minutes'],
+        'duration_min': service['duration_min'],
         'price': service['price'],
         'currency': 'TJS',
         'is_active': true,
@@ -288,7 +323,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String specialtyId,
   ) {
     return [
-      {'name': 'Main Service', 'duration_minutes': 60, 'price': 200.0},
+      {'name': 'Main Service', 'duration_min': 60, 'price': 200.0},
     ];
   }
 

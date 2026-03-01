@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/calendar_service.dart';
 import '../../../../core/utils/user_utils.dart';
@@ -31,62 +32,79 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
   String _masterName = 'Мастер';
   String _clientName = 'Клиент';
 
-  // Моковые данные - потом заменим на реальные
-  List<Map<String, dynamic>> _timeSlots = [
-    {'time': '09:00', 'available': true},
-    {'time': '09:30', 'available': true},
-    {'time': '10:00', 'available': true},
-    {'time': '10:30', 'available': true},
-    {'time': '11:00', 'available': true},
-    {'time': '11:30', 'available': true},
-    {'time': '12:00', 'available': true},
-    {'time': '12:30', 'available': true},
-    {'time': '13:00', 'available': true},
-    {'time': '13:30', 'available': true},
-    {'time': '14:00', 'available': true},
-    {'time': '14:30', 'available': true},
-    {'time': '15:00', 'available': true},
-    {'time': '15:30', 'available': true},
-    {'time': '16:00', 'available': true},
-    {'time': '16:30', 'available': true},
-    {'time': '17:00', 'available': true},
-    {'time': '17:30', 'available': false}, // Занято
+  List<Map<String, dynamic>> _timeSlots = [];
+
+  // --- Единый стиль ---
+  final BorderRadius _borderRadius = BorderRadius.circular(16);
+  final List<BoxShadow> _cardShadow = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.04),
+      blurRadius: 16,
+      offset: const Offset(0, 4),
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
-    // Устанавливаем дату без времени (только день)
-    _selectedDate = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-    );
-    // Загружаем начальные слоты
-    _loadInitialSlots();
+    _selectedDate =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    _loadSlotsForDate(_selectedDate);
   }
 
-  // Загрузка начальных слотов для сегодня
-  Future<void> _loadInitialSlots() async {
-    await _loadSlotsForDate(_selectedDate);
-  }
-
-  // Быстрая загрузка слотов для выбранной даты
   Future<void> _loadSlotsForDate(DateTime date) async {
     setState(() => _isLoadingSlots = true);
 
     try {
-      // Генерируем временные слоты каждые 30 минут с 9:00 до 18:00
+      final serviceData = await _getServiceDetails(widget.serviceId);
+      final duration = serviceData['duration_min'] ?? 60;
+
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final bookings = await Supabase.instance.client
+          .from('bookings')
+          .select('start_time, end_time')
+          .eq('master_id', widget.masterId)
+          .gte('start_time', startOfDay.toIso8601String())
+          .lt('start_time', endOfDay.toIso8601String())
+          .neq('status', 'cancelled');
+
+      final busyTimes = (bookings as List).map((b) {
+        final start = DateTime.parse(b['start_time'] as String);
+        final end = DateTime.parse(b['end_time'] as String);
+        return {'start': start, 'end': end};
+      }).toList();
+
       final slots = <Map<String, dynamic>>[];
       final startHour = 9;
       final endHour = 18;
 
       for (int hour = startHour; hour < endHour; hour++) {
         for (int minute in [0, 30]) {
-          final time =
+          final timeStr =
               '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-          // TODO: Проверить занятость через Supabase
-          slots.add({'time': time, 'available': true});
+          final slotDateTime =
+              DateTime(date.year, date.month, date.day, hour, minute);
+          final slotEnd = slotDateTime.add(Duration(minutes: duration));
+
+          bool isAvailable = true;
+          for (final busy in busyTimes) {
+            final busyStart = busy['start'] as DateTime;
+            final busyEnd = busy['end'] as DateTime;
+            if (!(slotEnd.isBefore(busyStart) ||
+                slotDateTime.isAfter(busyEnd))) {
+              isAvailable = false;
+              break;
+            }
+          }
+
+          slots.add({
+            'time': timeStr,
+            'available': isAvailable,
+            'start': slotDateTime,
+            'end': slotEnd,
+          });
         }
       }
 
@@ -99,6 +117,13 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingSlots = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка загрузки слотов: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -106,54 +131,32 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8F9FA), // Чуть более мягкий фон
       appBar: AppBar(
         title: Text(
-          'Запись: ${widget.serviceName}',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+          widget.serviceName,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        shadowColor: Colors.black.withOpacity(0.05),
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // 1. Календарь (фиксированная высота ~60%)
-              Expanded(
-                flex: 6, // 60% высоты
-                child: SingleChildScrollView(child: _buildCalendarSection()),
-              ),
-
-              // Разделитель
-              Container(
-                height: 1,
-                color: Colors.grey[200],
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-
-              // 2. Время (фиксированная высота ~40%)
-              Expanded(
-                flex: 4, // 40% высоты
-                child: _buildTimeSlotsSection(),
-              ),
-            ],
-          ),
-          if (_isLoadingSlots)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFF4A6EF6)),
-              ),
+      body: RefreshIndicator(
+        onRefresh: () => _loadSlotsForDate(_selectedDate),
+        color: Colors.blue.shade600,
+        child: Column(
+          children: [
+            _buildCalendarSection(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _buildTimeSlotsSection(),
             ),
-        ],
+          ],
+        ),
       ),
+      bottomNavigationBar: _buildConfirmButton(), // Липкая кнопка внизу
     );
   }
 
@@ -162,119 +165,69 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: _borderRadius,
+        boxShadow: _cardShadow,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Берет только нужную высоту
           children: [
             const Text(
               'Выберите дату',
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 12),
-
-            // КАЛЕНДАРЬ
-            SizedBox(
-              height: 400, // Увеличили высоту для исключения overflow
-              child: TableCalendar(
-                locale: 'ru_RU',
-                firstDay: DateTime.now(),
-                lastDay: DateTime.now().add(const Duration(days: 90)),
-                focusedDay: _selectedDate,
-                selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDate = selectedDay;
-                    _selectedTimeSlot = null;
-                  });
-                },
-                calendarFormat: CalendarFormat.month,
-                startingDayOfWeek: StartingDayOfWeek.monday,
-                headerStyle: const HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                  titleTextStyle: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  leftChevronIcon: Icon(
-                    Icons.chevron_left,
-                    color: Color(0xFF4A6EF6),
-                  ),
-                  rightChevronIcon: Icon(
-                    Icons.chevron_right,
-                    color: Color(0xFF4A6EF6),
-                  ),
-                  headerPadding: EdgeInsets.only(bottom: 12),
-                  headerMargin: EdgeInsets.only(bottom: 8),
+            const SizedBox(height: 8),
+            TableCalendar(
+              locale: 'ru_RU',
+              firstDay: DateTime.now(),
+              lastDay: DateTime.now().add(const Duration(days: 90)),
+              focusedDay: _selectedDate,
+              selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDate = selectedDay;
+                  _selectedTimeSlot = null;
+                });
+                _loadSlotsForDate(selectedDay);
+              },
+              calendarFormat: CalendarFormat.month,
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              availableGestures: AvailableGestures.horizontalSwipe, // Отключаем вертикальный свайп, чтобы не конфликтовал со скроллом
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                leftChevronIcon: Icon(Icons.chevron_left, color: Colors.blue.shade700),
+                rightChevronIcon: Icon(Icons.chevron_right, color: Colors.blue.shade700),
+              ),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.blue.shade200, width: 1),
                 ),
-                calendarStyle: CalendarStyle(
-                  // ← ИСПРАВЛЯЕМ ЦВЕТ ТЕКУЩЕГО ДНЯ
-                  todayDecoration: BoxDecoration(
-                    color: const Color(
-                      0xFF4A6EF6,
-                    ).withValues(alpha: 0.15), // ← БОЛЕЕ ПРОЗРАЧНЫЙ
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(
-                        0xFF4A6EF6,
-                      ).withValues(alpha: 0.5), // ← ТОНИРОВАННАЯ ГРАНИЦА
-                      width: 1,
-                    ),
-                  ),
-                  todayTextStyle: const TextStyle(
-                    color: Color(0xFF1A1A1A), // ← ТЕМНЫЙ ТЕКСТ ДЛЯ ТЕКУЩЕГО ДНЯ
-                    fontWeight: FontWeight.w500,
-                  ),
-
-                  // ← СТИЛЬ ВЫБРАННОГО ДНЯ (оставляем ярким)
-                  selectedDecoration: const BoxDecoration(
-                    color: Color(0xFF4A6EF6),
-                    shape: BoxShape.circle,
-                  ),
-                  selectedTextStyle: const TextStyle(color: Colors.white),
-
-                  // ← БАЗОВЫЕ СТИЛИ
-                  defaultTextStyle: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  weekendTextStyle: const TextStyle(color: Color(0xFFF24E1E)),
-                  outsideTextStyle: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[400],
-                  ),
-
-                  // ← ОПТИМИЗАЦИЯ РАЗМЕРОВ
-                  cellPadding: const EdgeInsets.all(6),
-                  cellMargin: EdgeInsets.zero,
+                todayTextStyle: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.w600),
+                selectedDecoration: BoxDecoration(
+                  color: Colors.blue.shade600,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                  ]
                 ),
-                daysOfWeekStyle: const DaysOfWeekStyle(
-                  weekdayStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF666666),
-                  ),
-                  weekendStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFF24E1E),
-                  ),
-                ),
+                selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                defaultTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+                weekendTextStyle: const TextStyle(color: Colors.redAccent),
+                outsideTextStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+              ),
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                weekendStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red.shade300),
               ),
             ),
           ],
@@ -285,70 +238,85 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
 
   Widget _buildTimeSlotsSection() {
     return Container(
-      color: Colors.white,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок времени
           Padding(
-            padding: const EdgeInsets.fromLTRB(32, 12, 32, 8),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Выберите время',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
+                const Text('Выберите время', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                 const SizedBox(height: 4),
                 Text(
                   _getFormattedDate(_selectedDate),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF666666),
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
           ),
-
-          // Сетка времени с прокруткой
           Expanded(
-            child: _timeSlots.isEmpty
-                ? _buildNoSlotsWidget()
-                : _buildTimeSlotsGrid(),
+            child: _isLoadingSlots
+                ? _buildSkeletonGrid()
+                : _timeSlots.isEmpty
+                    ? _buildNoSlotsWidget()
+                    : _buildTimeSlotsGrid(),
           ),
-
-          // Кнопка подтверждения
-          _buildConfirmButton(),
         ],
       ),
     );
   }
 
   Widget _buildTimeSlotsGrid() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8).copyWith(bottom: 24), // Отступ снизу для красоты
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 2.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: _timeSlots.length,
+      itemBuilder: (context, index) {
+        final slot = _timeSlots[index];
+        final isSelected = _selectedTimeSlot == slot['time'];
+
+        return _buildTimeSlotChip(
+          time: slot['time'],
+          isSelected: isSelected,
+          isAvailable: slot['available'],
+        );
+      },
+    );
+  }
+
+  // --- СКЕЛЕТОН ДЛЯ СЛОТОВ ВРЕМЕНИ ---
+  Widget _buildSkeletonGrid() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade50,
       child: GridView.builder(
-        shrinkWrap: true,
-        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
           childAspectRatio: 2.2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
-        itemCount: _timeSlots.length,
+        itemCount: 12, // Показываем 12 пульсирующих заглушек
         itemBuilder: (context, index) {
-          final slot = _timeSlots[index];
-          final isSelected = _selectedTimeSlot == slot['time'];
-
-          return _buildTimeSlotChip(
-            time: slot['time'],
-            isSelected: isSelected,
-            isAvailable: slot['available'],
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
           );
         },
       ),
@@ -360,20 +328,20 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.access_time_filled, size: 64, color: Colors.grey[300]),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+            child: Icon(Icons.event_busy, size: 48, color: Colors.grey.shade400),
+          ),
           const SizedBox(height: 16),
           const Text(
             'Нет доступного времени',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Выберите другую дату',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+          Text(
+            'Выберите другую дату для записи',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
         ],
@@ -381,49 +349,27 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     );
   }
 
-  Widget _buildTimeSlotChip({
-    required String time,
-    required bool isSelected,
-    required bool isAvailable,
-  }) {
+  Widget _buildTimeSlotChip({required String time, required bool isSelected, required bool isAvailable}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: isAvailable
-            ? () {
-                setState(() {
-                  _selectedTimeSlot = time;
-                });
-              }
-            : null,
+        onTap: isAvailable ? () => setState(() => _selectedTimeSlot = time) : null,
         borderRadius: BorderRadius.circular(12),
-        splashColor: const Color(0xFF4A6EF6).withValues(alpha: 0.1),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: isAvailable
-                ? (isSelected
-                    ? const Color(0xFF4A6EF6)
-                    : const Color(0xFFF8F9FF)) // ← СВЕТЛЫЙ ФОН ДЛЯ ДОСТУПНЫХ
-                : const Color(0xFFF5F5F5),
+                ? (isSelected ? Colors.blue.shade600 : Colors.white)
+                : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF4A6EF6)
-                  : (isAvailable
-                      ? const Color(
-                          0xFFE8EBFF,
-                        ) // ← СВЕТЛАЯ ГРАНИЦА ДЛЯ ДОСТУПНЫХ
-                      : Colors.transparent),
+                  ? Colors.blue.shade600
+                  : (isAvailable ? Colors.grey.shade300 : Colors.transparent),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF4A6EF6).withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
+                ? [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
                 : [],
           ),
           child: Center(
@@ -434,28 +380,15 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                   time,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     color: isAvailable
-                        ? (isSelected ? Colors.white : const Color(0xFF4A6EF6))
-                        : const Color(0xFFCCCCCC),
+                        ? (isSelected ? Colors.white : Colors.black87)
+                        : Colors.grey.shade400,
                   ),
                 ),
                 if (!isAvailable) ...[
                   const SizedBox(height: 2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Занято',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ),
+                  Text('Занято', style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
                 ],
               ],
             ),
@@ -469,41 +402,31 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     final isEnabled = _selectedTimeSlot != null;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 32), // Padding с учетом Safe Area iPhone/Android
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))
         ],
       ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 56,
-        child: ElevatedButton(
-          onPressed: isEnabled ? _confirmBooking : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-                isEnabled ? const Color(0xFF4A6EF6) : const Color(0xFFE8EBFF),
-            foregroundColor: isEnabled ? Colors.white : const Color(0xFFA0A9FF),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      child: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: isEnabled ? _confirmBooking : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              disabledBackgroundColor: Colors.grey.shade200,
+              foregroundColor: Colors.white,
+              disabledForegroundColor: Colors.grey.shade500,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: isEnabled ? 4 : 0,
+              shadowColor: Colors.blue.withOpacity(0.4),
             ),
-            elevation: isEnabled ? 3 : 0,
-            shadowColor: isEnabled
-                ? const Color(0xFF4A6EF6).withValues(alpha: 0.3)
-                : Colors.transparent,
-          ),
-          child: Text(
-            isEnabled ? 'Записаться на $_selectedTimeSlot' : 'Выберите время',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isEnabled ? Colors.white : const Color(0xFFA0A9FF),
+            child: Text(
+              isEnabled ? 'Записаться на $_selectedTimeSlot' : 'Выберите время',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -515,12 +438,9 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     if (_selectedTimeSlot == null) return;
 
     try {
-      // Создаем бронирование
       final booking = await _createBooking();
-
       if (booking == null) return;
 
-      // Добавляем в календарь
       final description = CalendarService.instance.buildBookingDescription(
         serviceName: widget.serviceName,
         masterName: _masterName,
@@ -536,22 +456,17 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       );
 
       if (added) {
-        _showSuccessDialog(
-          message: 'Запись создана и добавлена в ваш календарь!',
-        );
+        _showSuccessDialog(message: 'Запись создана и добавлена в ваш календарь!');
       } else {
         _showSuccessDialog(
-          message: 'Запись создана!',
-          subMessage: 'Разрешите доступ к календарю для напоминаний.',
+          message: 'Запись успешно создана!',
+          subMessage: 'Разрешите доступ к календарю для автоматических напоминаний.',
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Ошибка: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -560,37 +475,54 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
   void _showSuccessDialog({required String message, String? subMessage}) {
     showDialog(
       context: context,
+      barrierDismissible: false, // Пользователь должен нажать кнопку
       builder: (context) => AlertDialog(
-        title: const Text('✅ Успешно!'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.check_circle, size: 48, color: Colors.green.shade600),
+            ),
+            const SizedBox(height: 16),
+            const Text('Успешно!', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
             if (subMessage != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                subMessage,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              const SizedBox(height: 12),
+              Text(subMessage, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4)),
             ],
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back
-            },
-            child: const Text('ОК'),
-          ),
+          if (subMessage != null)
+            TextButton(
+              onPressed: () {
+                openAppSettings();
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: Text('Настройки', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.w600)),
+            ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              minimumSize: const Size(double.infinity, 48), // Кнопка во всю ширину
+              elevation: 0,
+            ),
             onPressed: () {
-              // Открыть настройки календаря
-              openAppSettings();
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Закрываем диалог
+              Navigator.pop(context); // Возвращаемся назад
             },
-            child: const Text('Настройки календаря'),
+            child: const Text('Отлично', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -603,18 +535,16 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     final selected = DateTime(date.year, date.month, date.day);
 
     if (selected == today) {
-      return 'Сегодня';
+      return 'Сегодня, ${DateFormat('d MMMM', 'ru_RU').format(date)}';
     } else if (selected == today.add(const Duration(days: 1))) {
-      return 'Завтра';
+      return 'Завтра, ${DateFormat('d MMMM', 'ru_RU').format(date)}';
     } else {
       final formatter = DateFormat('EEEE, d MMMM', 'ru_RU');
       final formatted = formatter.format(date);
-      // Делаем первую букву заглавной
       return formatted[0].toUpperCase() + formatted.substring(1);
     }
   }
 
-  // Комбинируем дату и время
   DateTime _combineDateTime(DateTime date, String time) {
     final timeParts = time.split(':');
     return DateTime(
@@ -635,11 +565,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       final clientId = UserUtils.getCurrentUserIdOrThrow();
       final service = await _getServiceDetails(widget.serviceId);
       final startTime = _combineDateTime(_selectedDate, _selectedTimeSlot!);
-      final endTime = startTime.add(
-        Duration(minutes: service['duration_minutes']),
-      );
+      final endTime = startTime.add(Duration(minutes: service['duration_min']));
 
-      // Получаем имя клиента
       final clientResponse = await Supabase.instance.client
           .from('profiles')
           .select('full_name')
@@ -648,18 +575,19 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       _clientName = clientResponse['full_name'] ?? 'Клиент';
       _masterName = service['master_name'] ?? 'Мастер';
 
+      final organizationId = service['organization_id'];
+
       final response = await Supabase.instance.client
           .from('bookings')
           .insert({
             'client_id': clientId,
             'master_id': service['master_id'],
             'service_id': widget.serviceId,
-            'organization_id': service['organization_id'],
+            'organization_id': organizationId,
             'start_time': startTime.toIso8601String(),
             'end_time': endTime.toIso8601String(),
             'status': 'pending',
-            'price': service['price'],
-            'currency': 'TJS',
+            'price_som': (service['price'] as num?)?.toInt() ?? 0,
           })
           .select()
           .single();
@@ -677,8 +605,7 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
 
       await NotificationService().showSimpleNotification(
         title: 'Запись создана',
-        body:
-            'Вы записаны на ${widget.serviceName} в $_selectedTimeSlot. Ожидайте подтверждения мастера.',
+        body: 'Вы записаны на ${widget.serviceName} в $_selectedTimeSlot. Ожидайте подтверждения.',
       );
 
       await NotificationService().scheduleReminder(
@@ -702,31 +629,27 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     final response = await supabase.from('services').select('''
           id,
           master_id,
-          name,
-          duration_minutes,
+          title,
+          duration_min,
           price,
-          profiles!services_master_id_fkey(organization_id, full_name)
+          profiles!services_master_id_fkey(full_name, organization_id)
         ''').eq('id', serviceId).single();
 
     return {
       'id': response['id'] as String,
       'master_id': response['master_id'] as String,
-      'organization_id': response['profiles']['organization_id'] as String?,
       'master_name': response['profiles']['full_name'] as String?,
-      'name': response['name'] as String,
-      'duration_minutes': response['duration_minutes'] as int? ?? 60,
+      'organization_id': response['profiles']['organization_id'],
+      'title': response['title'] as String,
+      'duration_min': response['duration_min'] as int? ?? 60,
       'price': (response['price'] as num?)?.toDouble() ?? 0.0,
     };
   }
 
-  Future<void> _sendNotificationToMaster(
-    String masterId,
-    DateTime startTime,
-  ) async {
+  Future<void> _sendNotificationToMaster(String masterId, DateTime startTime) async {
     await NotificationService().showSimpleNotification(
-      title: 'New booking request',
-      body:
-          'New booking for ${widget.serviceName} at ${_formatTime(startTime)}',
+      title: 'Новая заявка',
+      body: 'Новая запись на ${widget.serviceName} в ${_formatTime(startTime)}',
     );
   }
 
