@@ -93,7 +93,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         return Scaffold(
           backgroundColor: const Color(0xFFF8F9FA),
           appBar: AppBar(
-            title: const Text('Новая запись', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
+            title: const Text('Новая запись',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
             centerTitle: true,
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,
@@ -102,14 +103,15 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.blue),
-                onPressed: () => context.read<CreateBookingBloc>().add(ResetForm()),
+                onPressed: () =>
+                    context.read<CreateBookingBloc>().add(ResetForm()),
                 tooltip: 'Очистить форму',
               ),
             ],
           ),
           body: _buildBody(state),
-          bottomNavigationBar: (state is CreateBookingDataLoaded) 
-              ? _buildStickySubmitButton(state, canSubmit) 
+          bottomNavigationBar: (state is CreateBookingDataLoaded)
+              ? _buildStickySubmitButton(state, canSubmit)
               : null,
         );
       },
@@ -149,7 +151,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         children: [
           Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
           const SizedBox(height: 16),
-          const Text('Ошибка загрузки данных', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          const Text('Ошибка загрузки данных',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -175,11 +178,17 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(width: 12),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87)),
         ],
       ),
     );
@@ -190,58 +199,76 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader('Клиент', Icons.person_rounded, Colors.blue.shade600),
+          _buildSectionHeader(
+              'Клиент', Icons.person_rounded, Colors.blue.shade600),
           Divider(height: 1, color: Colors.grey.shade100),
-          
           if (state.selectedClientId != null)
             ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              title: Text(state.selectedClientName!, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('ID: ${state.selectedClientId}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              title: Text(state.selectedClientName!,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text('ID: ${state.selectedClientId}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
               trailing: IconButton(
                 icon: Icon(Icons.cancel_rounded, color: Colors.grey.shade400),
-                onPressed: () => context.read<CreateBookingBloc>().add(ClientSelected('', '')),
+                onPressed: () => context
+                    .read<CreateBookingBloc>()
+                    .add(ClientSelected('', '')),
               ),
             )
           else ...[
             if (state.clients.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text('Нет доступных клиентов', style: TextStyle(color: Colors.grey.shade500)),
+                child: Text('Нет доступных клиентов',
+                    style: TextStyle(color: Colors.grey.shade500)),
               )
             else
               ...state.clients.map((client) => Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => context.read<CreateBookingBloc>().add(
-                        ClientSelected(client['id'] as String, client['name'] as String),
-                      ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.blue.shade50,
-                          child: Text((client['name'] as String)[0].toUpperCase(), style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(client['name'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
-                              if (client['phone'] != null)
-                                Text(client['phone'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                            ],
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.read<CreateBookingBloc>().add(
+                            ClientSelected(client['id'] as String,
+                                client['name'] as String),
                           ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.blue.shade50,
+                              child: Text(
+                                  (client['name'] as String)[0].toUpperCase(),
+                                  style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(client['name'] as String,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                  if (client['phone'] != null)
+                                    Text(client['phone'] as String,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded,
+                                color: Colors.grey.shade400),
+                          ],
                         ),
-                        Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              )),
+                  )),
           ],
         ],
       ),
@@ -253,60 +280,74 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader('Услуга', Icons.content_cut_rounded, Colors.purple.shade500),
+          _buildSectionHeader(
+              'Услуга', Icons.content_cut_rounded, Colors.purple.shade500),
           Divider(height: 1, color: Colors.grey.shade100),
-          
           if (state.selectedServiceId != null)
             ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              title: Text(state.selectedServiceName!, style: const TextStyle(fontWeight: FontWeight.w600)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              title: Text(state.selectedServiceName!,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(
                 '${state.selectedServiceDuration} мин • ${state.selectedServicePrice} с.',
-                style: TextStyle(color: Colors.purple.shade600, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    color: Colors.purple.shade600, fontWeight: FontWeight.w500),
               ),
               trailing: IconButton(
                 icon: Icon(Icons.cancel_rounded, color: Colors.grey.shade400),
-                onPressed: () => context.read<CreateBookingBloc>().add(ServiceSelected('', '', 0, 0)),
+                onPressed: () => context
+                    .read<CreateBookingBloc>()
+                    .add(ServiceSelected('', '', 0, 0)),
               ),
             )
           else ...[
             if (state.services.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text('Нет доступных услуг', style: TextStyle(color: Colors.grey.shade500)),
+                child: Text('Нет доступных услуг',
+                    style: TextStyle(color: Colors.grey.shade500)),
               )
             else
               ...state.services.map((service) => Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => context.read<CreateBookingBloc>().add(
-                        ServiceSelected(
-                          service['id'] as String,
-                          service['name'] as String,
-                          service['duration'] as int,
-                          service['price'] as int,
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.read<CreateBookingBloc>().add(
+                            ServiceSelected(
+                              service['id'] as String,
+                              service['name'] as String,
+                              int.tryParse(service['duration'].toString()) ?? 0,
+                              int.tryParse(service['price'].toString()) ?? 0,
+                            ),
+                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(service['name'] as String,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                      '${service['duration']} мин • ${service['price']} с.',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded,
+                                color: Colors.grey.shade400),
+                          ],
                         ),
                       ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(service['name'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 2),
-                              Text('${service['duration']} мин • ${service['price']} с.', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
-                      ],
                     ),
-                  ),
-                ),
-              )),
+                  )),
           ],
         ],
       ),
@@ -318,43 +359,51 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader('Дата и время', Icons.calendar_month_rounded, Colors.orange.shade500),
+          _buildSectionHeader('Дата и время', Icons.calendar_month_rounded,
+              Colors.orange.shade500),
           Divider(height: 1, color: Colors.grey.shade100),
-          
           Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => _selectDate(context, state),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Дата', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Text('Дата',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
                           const SizedBox(height: 4),
                           Text(
                             state.selectedDate != null
-                                ? DateFormat('EEEE, d MMMM y', 'ru_RU').format(state.selectedDate!)
+                                ? DateFormat('EEEE, d MMMM y', 'ru_RU')
+                                    .format(state.selectedDate!)
                                 : 'Выберите дату',
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: state.selectedDate != null ? FontWeight.w600 : FontWeight.normal,
-                              color: state.selectedDate != null ? Colors.black87 : Colors.blue.shade600,
+                              fontWeight: state.selectedDate != null
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: state.selectedDate != null
+                                  ? Colors.black87
+                                  : Colors.blue.shade600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.edit_calendar_rounded, color: Colors.grey.shade400, size: 20),
+                    Icon(Icons.edit_calendar_rounded,
+                        color: Colors.grey.shade400, size: 20),
                   ],
                 ),
               ),
             ),
           ),
-          
           if (state.selectedDate != null) ...[
             Divider(height: 1, color: Colors.grey.shade100),
             Material(
@@ -362,14 +411,17 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               child: InkWell(
                 onTap: () => _selectTime(context, state),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Время', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            const Text('Время',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
                             const SizedBox(height: 4),
                             Text(
                               state.selectedTime != null
@@ -377,34 +429,44 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                                   : 'Выберите время',
                               style: TextStyle(
                                 fontSize: 15,
-                                fontWeight: state.selectedTime != null ? FontWeight.w600 : FontWeight.normal,
-                                color: state.selectedTime != null ? Colors.black87 : Colors.blue.shade600,
+                                fontWeight: state.selectedTime != null
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: state.selectedTime != null
+                                    ? Colors.black87
+                                    : Colors.blue.shade600,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.access_time_rounded, color: Colors.grey.shade400, size: 20),
+                      Icon(Icons.access_time_rounded,
+                          color: Colors.grey.shade400, size: 20),
                     ],
                   ),
                 ),
               ),
             ),
           ],
-          
           if (state.busySlots.isNotEmpty && state.selectedDate != null)
             Container(
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8)),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.red.shade400),
+                  Icon(Icons.info_outline,
+                      size: 16, color: Colors.red.shade400),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Занято: ${state.busySlots.map((t) => DateFormat.Hm().format(t)).join(', ')}',
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -415,7 +477,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     );
   }
 
-  Future<void> _selectDate(BuildContext context, CreateBookingDataLoaded state) async {
+  Future<void> _selectDate(
+      BuildContext context, CreateBookingDataLoaded state) async {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 30));
     final lastDate = now.add(const Duration(days: 365));
@@ -443,15 +506,19 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     if (pickedDate != null) {
       _tempSelectedDate = pickedDate;
       if (state.selectedTime != null) {
-        context.read<CreateBookingBloc>().add(DateTimeSelected(pickedDate, state.selectedTime!));
+        context
+            .read<CreateBookingBloc>()
+            .add(DateTimeSelected(pickedDate, state.selectedTime!));
       } else if (mounted) {
         _selectTime(context, state);
       }
     }
   }
 
-  Future<void> _selectTime(BuildContext context, CreateBookingDataLoaded state) async {
-    final initialTime = state.selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
+  Future<void> _selectTime(
+      BuildContext context, CreateBookingDataLoaded state) async {
+    final initialTime =
+        state.selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
 
     final pickedTime = await showTimePicker(
       context: context,
@@ -472,8 +539,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
     if (pickedTime != null) {
       _tempSelectedTime = pickedTime;
-      final dateToUse = state.selectedDate ?? _tempSelectedDate ?? DateTime.now();
-      context.read<CreateBookingBloc>().add(DateTimeSelected(dateToUse, pickedTime));
+      final dateToUse =
+          state.selectedDate ?? _tempSelectedDate ?? DateTime.now();
+      context
+          .read<CreateBookingBloc>()
+          .add(DateTimeSelected(dateToUse, pickedTime));
     }
   }
 
@@ -482,7 +552,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader('Дополнительно', Icons.comment_rounded, Colors.teal.shade500),
+          _buildSectionHeader(
+              'Дополнительно', Icons.comment_rounded, Colors.teal.shade500),
           Divider(height: 1, color: Colors.grey.shade100),
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -513,20 +584,29 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           Theme(
             data: ThemeData(unselectedWidgetColor: Colors.grey.shade400),
             child: CheckboxListTile(
-              title: const Text('Синхронизация', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              title: const Text('Синхронизация',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: Text(
-                _hasGoogleAccount ? 'Добавить в Google Календарь' : 'Google аккаунт не подключен',
+                _hasGoogleAccount
+                    ? 'Добавить в Google Календарь'
+                    : 'Google аккаунт не подключен',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
               ),
               value: _addToGoogleCalendar,
               activeColor: Colors.blue.shade600,
-              onChanged: _hasGoogleAccount ? (value) => setState(() => _addToGoogleCalendar = value!) : null,
+              onChanged: _hasGoogleAccount
+                  ? (value) => setState(() => _addToGoogleCalendar = value!)
+                  : null,
               secondary: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                child: Icon(Icons.sync_rounded, color: Colors.blue.shade600, size: 20),
+                decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8)),
+                child: Icon(Icons.sync_rounded,
+                    color: Colors.blue.shade600, size: 20),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
           ),
         ],
@@ -537,7 +617,10 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget _buildPreviewSection(CreateBookingDataLoaded state) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.blue.shade50, Colors.blue.shade100.withOpacity(0.5)]),
+        gradient: LinearGradient(colors: [
+          Colors.blue.shade50,
+          Colors.blue.shade100.withOpacity(0.5)
+        ]),
         borderRadius: _borderRadius,
         border: Border.all(color: Colors.blue.shade200),
       ),
@@ -549,13 +632,19 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.blue.shade700, size: 20),
               const SizedBox(width: 8),
-              Text('Готово к созданию', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue.shade900)),
+              Text('Готово к созданию',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.blue.shade900)),
             ],
           ),
           const SizedBox(height: 16),
-          _buildPreviewRow(Icons.person_outline_rounded, state.selectedClientName!),
+          _buildPreviewRow(
+              Icons.person_outline_rounded, state.selectedClientName!),
           const SizedBox(height: 12),
-          _buildPreviewRow(Icons.content_cut_rounded, state.selectedServiceName!),
+          _buildPreviewRow(
+              Icons.content_cut_rounded, state.selectedServiceName!),
           const SizedBox(height: 12),
           _buildPreviewRow(
             Icons.access_time_rounded,
@@ -564,7 +653,9 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             '${state.calculatedEndTime != null ? DateFormat.Hm().format(state.calculatedEndTime!) : ''}',
           ),
           const SizedBox(height: 12),
-          _buildPreviewRow(Icons.monetization_on_outlined, '${state.selectedServicePrice} сомони', isBold: true),
+          _buildPreviewRow(Icons.monetization_on_outlined,
+              '${state.selectedServicePrice} сомони',
+              isBold: true),
         ],
       ),
     );
@@ -589,13 +680,17 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     );
   }
 
-  Widget _buildStickySubmitButton(CreateBookingDataLoaded state, bool canSubmit) {
+  Widget _buildStickySubmitButton(
+      CreateBookingDataLoaded state, bool canSubmit) {
     return Container(
       padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 32),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5))
         ],
       ),
       child: SafeArea(
@@ -604,18 +699,21 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           height: 56,
           child: ElevatedButton.icon(
             icon: const Icon(Icons.check_circle_outline, size: 22),
-            label: const Text('Создать запись', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            label: const Text('Создать запись',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,
               disabledBackgroundColor: Colors.grey.shade200,
               foregroundColor: Colors.white,
               disabledForegroundColor: Colors.grey.shade500,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               elevation: canSubmit ? 4 : 0,
               shadowColor: Colors.green.withOpacity(0.4),
             ),
             onPressed: canSubmit
-                ? () => context.read<CreateBookingBloc>().add(SubmitBooking(addToGoogleCalendar: _addToGoogleCalendar))
+                ? () => context.read<CreateBookingBloc>().add(
+                    SubmitBooking(addToGoogleCalendar: _addToGoogleCalendar))
                 : null,
           ),
         ),
@@ -623,21 +721,26 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     );
   }
 
-  Future<void> _showSuccessDialog(BuildContext context, String bookingId) async {
+  Future<void> _showSuccessDialog(
+      BuildContext context, String bookingId) async {
     final shouldAddToCalendar = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.check_circle, size: 48, color: Colors.green.shade600),
+                  decoration: BoxDecoration(
+                      color: Colors.green.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.check_circle,
+                      size: 48, color: Colors.green.shade600),
                 ),
                 const SizedBox(height: 16),
-                const Text('Запись создана!', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Запись создана!',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             content: const Text(
@@ -649,7 +752,10 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: Text('Позже', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                child: Text('Позже',
+                    style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600)),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
@@ -657,9 +763,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                   backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Добавить', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Добавить',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),

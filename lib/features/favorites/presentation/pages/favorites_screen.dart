@@ -37,9 +37,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       if (userId == null) return;
 
       // Получаем избранных мастеров (предполагаемая структура)
+      // ИСПРАВЛЕНИЕ: Явно указываем foreign key для избежания ambiguous join
       final data = await _supabase
           .from('favorites')
-          .select('id, master:profiles(*)')
+          .select('id, master:profiles!favorites_master_id_fkey(*)')
           .eq('client_id', userId);
 
       if (mounted) {

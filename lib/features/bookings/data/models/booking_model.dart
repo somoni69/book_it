@@ -17,6 +17,9 @@ class BookingModel {
   final Map<String, dynamic>? masterProfile;
   final Map<String, dynamic>? serviceDetails;
   final String? organizationId;
+  // --- New fields for daily bookings ---
+  final String bookingType; // 'time_slot' or 'daily'
+  final int capacity; // Number of guests/spots booked
 
   const BookingModel({
     required this.id,
@@ -35,6 +38,8 @@ class BookingModel {
     this.masterProfile,
     this.serviceDetails,
     this.organizationId,
+    this.bookingType = 'time_slot',
+    this.capacity = 1,
   });
 
   BookingModel copyWith({
@@ -54,6 +59,8 @@ class BookingModel {
     Map<String, dynamic>? masterProfile,
     Map<String, dynamic>? serviceDetails,
     String? organizationId,
+    String? bookingType,
+    int? capacity,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -72,6 +79,8 @@ class BookingModel {
       masterProfile: masterProfile ?? this.masterProfile,
       serviceDetails: serviceDetails ?? this.serviceDetails,
       organizationId: organizationId ?? this.organizationId,
+      bookingType: bookingType ?? this.bookingType,
+      capacity: capacity ?? this.capacity,
     );
   }
 
@@ -93,6 +102,8 @@ class BookingModel {
       'master_profile': masterProfile,
       'service_details': serviceDetails,
       'organization_id': organizationId,
+      'booking_type': bookingType,
+      'capacity': capacity,
     };
   }
 
@@ -120,6 +131,12 @@ class BookingModel {
       clientProfile: json['client_profile'] as Map<String, dynamic>?,
       masterProfile: json['master_profile'] as Map<String, dynamic>?,
       serviceDetails: json['service_details'] as Map<String, dynamic>?,
+      bookingType: json['booking_type']?.toString() ??
+          (json['service_details']?['booking_type'] as String?) ??
+          'time_slot',
+      capacity: (json['capacity'] as int?) ??
+          (json['service_details']?['capacity'] as int?) ??
+          1,
     );
   }
 
@@ -154,6 +171,8 @@ class BookingModel {
       clientName: clientProfile?['full_name'] as String? ?? 'Аноним',
       masterName: masterProfile?['full_name'] as String? ?? 'Мастер',
       serviceName: serviceDetails?['title'] as String? ?? 'Услуга',
+      bookingType: bookingType,
+      capacity: capacity,
     );
   }
 

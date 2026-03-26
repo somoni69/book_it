@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/auth_repository.dart';
 
@@ -310,7 +311,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await supabase.from('services').insert({
         'master_id': masterId,
         'organization_id': orgId,
-        'name': service['name'],
+        'title': service['name'],
         'duration_min': service['duration_min'],
         'price': service['price'],
         'currency': 'TJS',
@@ -342,5 +343,37 @@ class AuthRepositoryImpl implements AuthRepository {
     });
 
     await supabase.from('working_hours').insert(workingHours);
+  }
+
+  // --- ЗАГРУЗКА АВАТАРКИ ---
+  // --- УНИВЕРСАЛЬНАЯ ЗАГРУЗКА АВАТАРКИ (Мобилки + Web) ---
+  Future<String> uploadAvatar(XFile imageFile) async {
+    final userId = currentUserId;
+    if (userId == null) throw Exception('Пользователь не авторизован');
+
+    try {
+      final fileExt = imageFile.name.split('.').last.toLowerCase();
+      final fileName =
+          '$userId-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = fileName;
+
+      // Читаем фото как байты (это безопасно работает в Web)
+      final imageBytes = await imageFile.readAsBytes();
+
+      // Используем uploadBinary вместо простого upload
+      await supabase.storage.from('avatars').uploadBinary(
+            filePath,
+            imageBytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
+      final imageUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      await updateProfile(profileId: userId, updates: {'avatar_url': imageUrl});
+
+      return imageUrl;
+    } catch (e) {
+      throw Exception('Ошибка при загрузке фото: $e');
+    }
   }
 }

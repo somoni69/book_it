@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../auth/presentation/pages/login_page.dart';
+
+// --- ИМПОРТ ТВОЕГО АДАПТИВНОГО ЛЕЙАУТА (Проверь путь!) ---
+import '../../../../core/widgets/responsive_layout.dart';
+
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
 import '../../data/repositories/service_repository_impl.dart';
@@ -53,7 +58,6 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
     _loadMasterInfo();
   }
 
-  // --- ДИНАМИЧЕСКОЕ ПРИВЕТСТВИЕ ---
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) return 'Доброе утро,';
@@ -88,7 +92,7 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
 
         final bookings = await supabase
             .from('bookings')
-            .select('id') // Запрашиваем только ID для оптимизации трафика
+            .select('id')
             .eq('master_id', userId)
             .gte('start_time', startOfDay.toIso8601String())
             .lt('start_time', endOfDay.toIso8601String())
@@ -147,8 +151,10 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
           endTime: DateTime.parse(json['end_time'] as String),
           status: _parseStatus(json['status'] as String),
           comment: json['comment'] as String?,
-          clientName: json['client_profile']?['full_name'] as String? ?? 'Клиент',
-          masterName: json['master_profile']?['full_name'] as String? ?? 'Мастер',
+          clientName:
+              json['client_profile']?['full_name'] as String? ?? 'Клиент',
+          masterName:
+              json['master_profile']?['full_name'] as String? ?? 'Мастер',
         );
       }).toList();
     } catch (e) {
@@ -158,11 +164,16 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
 
   BookingStatus _parseStatus(String status) {
     switch (status.toLowerCase()) {
-      case 'pending': return BookingStatus.pending;
-      case 'confirmed': return BookingStatus.confirmed;
-      case 'cancelled': return BookingStatus.cancelled;
-      case 'completed': return BookingStatus.completed;
-      default: return BookingStatus.pending;
+      case 'pending':
+        return BookingStatus.pending;
+      case 'confirmed':
+        return BookingStatus.confirmed;
+      case 'cancelled':
+        return BookingStatus.cancelled;
+      case 'completed':
+        return BookingStatus.completed;
+      default:
+        return BookingStatus.pending;
     }
   }
 
@@ -174,24 +185,27 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
     final serviceRepository = ServiceRepositoryImpl(supabase);
     final currentUserId = supabase.auth.currentUser!.id;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => BlocProvider(
-          create: (context) => BookingBloc(
-            repository: repository,
-            serviceRepository: serviceRepository,
-            masterId: currentUserId,
-          )..add(LoadBookingsForDate(DateTime.now(), 60, '')),
-          child: const MasterJournalPage(),
-        ),
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => BlocProvider(
+        create: (context) => BookingBloc(
+          repository: repository,
+          serviceRepository: serviceRepository,
+          masterId: currentUserId,
+        )..add(LoadBookingsForDate(DateTime.now(), 60, '')),
+        child: const MasterJournalPage(),
       ),
-    );
+    ));
   }
 
-  void _navigateToSchedule() => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const WorkingHoursScreen()));
-  void _navigateToServices() => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MasterServicesPage()));
-  void _navigateToTodayBookings() => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MasterTodayBookingsScreen()));
-  void _navigateToProfile() => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MasterProfileScreen()));
+  void _navigateToSchedule() => Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const WorkingHoursScreen()));
+  void _navigateToServices() => Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const MasterServicesPage()));
+  void _navigateToTodayBookings() =>
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => const MasterTodayBookingsScreen()));
+  void _navigateToProfile() => Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const MasterProfileScreen()));
 
   void _navigateToReviews() {
     final currentMasterId = Supabase.instance.client.auth.currentUser?.id;
@@ -207,29 +221,34 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Выход из аккаунта', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Выход из аккаунта',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Вы уверены, что хотите выйти?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Отмена', style: TextStyle(color: Colors.grey.shade600))
-          ),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Отмена',
+                  style: TextStyle(color: Colors.grey.shade600))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red.shade600,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Выйти')
-          ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade50,
+                foregroundColor: Colors.red.shade600,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Выйти')),
         ],
       ),
     );
 
     if (confirmed == true && mounted) {
       await Supabase.instance.client.auth.signOut();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
     }
   }
 
@@ -238,7 +257,8 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Панель управления', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+        title: const Text('Панель управления',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
         centerTitle: false,
         elevation: 0,
         backgroundColor: const Color(0xFFF8F9FA),
@@ -246,26 +266,32 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
         actions: [
           if (!_isLoading) ...[
             IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Уведомления - в разработке')));
-              },
+              icon: const Icon(Icons.notifications_outlined,
+                  color: Colors.black87),
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Уведомления - в разработке'))),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 16.0, left: 8.0, top: 8.0, bottom: 8.0),
+              padding: const EdgeInsets.only(
+                  right: 16.0, left: 8.0, top: 8.0, bottom: 8.0),
               child: GestureDetector(
                 onTap: _navigateToProfile,
                 child: Container(
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.blue.shade100, width: 2),
-                  ),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: Colors.blue.shade100, width: 2)),
                   child: CircleAvatar(
                     radius: 16,
                     backgroundColor: Colors.blue.shade50,
-                    backgroundImage: _avatarUrl.isNotEmpty ? NetworkImage(_avatarUrl) : null,
+                    backgroundImage:
+                        _avatarUrl.isNotEmpty ? NetworkImage(_avatarUrl) : null,
                     child: _avatarUrl.isEmpty
-                        ? Text(_userInitials, style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 13))
+                        ? Text(_userInitials,
+                            style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13))
                         : null,
                   ),
                 ),
@@ -274,209 +300,337 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
           ]
         ],
       ),
-      body: _isLoading ? _buildSkeleton() : _buildContent(),
+      body: _isLoading ? _buildSkeleton() : _buildContent(context),
     );
   }
 
-  Widget _buildContent() {
+  // --- НОВАЯ АДАПТИВНАЯ СТРУКТУРА ---
+  Widget _buildContent(BuildContext context) {
+    // ЛЕВАЯ КОЛОНКА (Основной контент)
+    final leftColumnContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeroCard(),
+        const SizedBox(height: 28),
+        _buildSectionTitle('Быстрые действия'),
+        const SizedBox(height: 16),
+        _buildQuickActions(context),
+        const SizedBox(height: 28),
+        _buildNextBookings(),
+      ],
+    );
+
+    // ПРАВАЯ КОЛОНКА (Меню управления)
+    final rightColumnContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle('Управление'),
+        const SizedBox(height: 16),
+        _buildManagementMenu(),
+        const SizedBox(height: 24),
+        _buildSectionTitle('Дополнительно'),
+        const SizedBox(height: 16),
+        _buildExtraMenu(),
+      ],
+    );
+
     return RefreshIndicator(
       onRefresh: _loadMasterInfo,
       color: Colors.blue.shade600,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- HERO-КАРТОЧКА ---
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade600, Colors.indigo.shade600],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: _borderRadius,
-                boxShadow: [
-                  BoxShadow(color: Colors.blue.shade300.withOpacity(0.5), blurRadius: 24, offset: const Offset(0, 8)),
+        child: Center(
+          // Центрируем для огромных мониторов
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+                maxWidth: 1200), // Максимальная ширина интерфейса
+            child: ResponsiveLayout(
+              // 📱 ВЕРСИЯ ДЛЯ ТЕЛЕФОНА (Всё в один столбец)
+              mobile: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  leftColumnContent,
+                  const SizedBox(height: 28),
+                  rightColumnContent,
+                  const SizedBox(height: 40),
                 ],
               ),
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
+
+              // 💻 ВЕРСИЯ ДЛЯ ПК (Две колонки)
+              desktop: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_getGreeting(), style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 4),
-                  Text(_masterName, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 24),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _navigateToTodayBookings,
-                      borderRadius: BorderRadius.circular(14),
-                      highlightColor: Colors.white.withOpacity(0.1),
-                      splashColor: Colors.white.withOpacity(0.2),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.flash_on_rounded, size: 20, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Сегодня: $_todayBookingsCount ${_getPluralForm(_todayBookingsCount)}',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
-                            ),
-                            const SizedBox(width: 12),
-                            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white.withOpacity(0.7)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  Expanded(flex: 7, child: leftColumnContent),
+                  const SizedBox(width: 32),
+                  Expanded(flex: 4, child: rightColumnContent),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
-
-            // --- БЫСТРЫЕ ДЕЙСТВИЯ ---
-            _buildSectionTitle('Быстрые действия'),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildQuickActionCard(
-                  icon: Icons.add_circle_outline_rounded,
-                  label: 'Новая запись',
-                  color: Colors.blue,
-                  onTap: () {
-                    final userId = Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => BlocProvider(
-                          create: (context) => CreateBookingBloc(supabase: Supabase.instance.client, masterId: userId)..add(LoadInitialData(userId)),
-                          child: const CreateBookingScreen(),
-                        )
-                      ));
-                    }
-                  }
-                ),
-                const SizedBox(width: 12),
-                _buildQuickActionCard(
-                  icon: Icons.access_time_rounded,
-                  label: 'Слоты',
-                  color: Colors.green,
-                  onTap: _navigateToSchedule
-                ),
-                const SizedBox(width: 12),
-                _buildQuickActionCard(
-                  icon: Icons.notifications_active_outlined,
-                  label: 'Напоминания',
-                  color: Colors.orange,
-                  hasBadge: true,
-                  onTap: () {
-                    final userId = Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => BlocProvider(
-                          create: (context) => RemindersBloc(supabase: Supabase.instance.client),
-                          child: RemindersManagementScreen(masterId: userId),
-                        )
-                      ));
-                    }
-                  }
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildQuickActionCard(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Календарь',
-                  color: Colors.indigo,
-                  onTap: () {
-                    final userId = Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => GoogleCalendarSettingsScreen(masterId: userId)));
-                    }
-                  }
-                ),
-                const SizedBox(width: 12),
-                _buildQuickActionCard(
-                  icon: Icons.settings_outlined,
-                  label: 'Настройки',
-                  color: Colors.grey.shade700,
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('В разработке')))
-                ),
-                const SizedBox(width: 12),
-                _buildQuickActionCard(
-                  icon: Icons.help_outline_rounded,
-                  label: 'Помощь',
-                  color: Colors.teal,
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('В разработке')))
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-
-            // --- БЛИЖАЙШИЕ ЗАПИСИ ---
-            _buildNextBookings(),
-            const SizedBox(height: 24),
-
-            // --- УПРАВЛЕНИЕ ---
-            _buildSectionTitle('Управление'),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius, boxShadow: _cardShadow),
-              child: Column(
-                children: [
-                  _buildGroupedMenuRow(icon: Icons.book_online_rounded, title: 'Журнал записей', color: Colors.blue.shade600, onTap: _navigateToJournal),
-                  Divider(height: 1, indent: 56, color: Colors.grey.shade100),
-                  _buildGroupedMenuRow(icon: Icons.calendar_today_rounded, title: 'Мое расписание', color: Colors.green.shade600, onTap: _navigateToSchedule),
-                  Divider(height: 1, indent: 56, color: Colors.grey.shade100),
-                  _buildGroupedMenuRow(icon: Icons.content_cut_rounded, title: 'Мои услуги', color: Colors.orange.shade600, onTap: _navigateToServices),
-                  Divider(height: 1, indent: 56, color: Colors.grey.shade100),
-                  _buildGroupedMenuRow(icon: Icons.star_border_rounded, title: 'Отзывы клиентов', color: Colors.amber.shade600, onTap: _navigateToReviews),
-                  Divider(height: 1, indent: 56, color: Colors.grey.shade100),
-                  _buildGroupedMenuRow(icon: Icons.person_outline_rounded, title: 'Профиль мастера', color: Colors.purple.shade500, onTap: _navigateToProfile),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            _buildSectionTitle('Дополнительно'),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius, boxShadow: _cardShadow),
-              child: _buildGroupedMenuRow(icon: Icons.exit_to_app_rounded, title: 'Выйти из аккаунта', color: Colors.red.shade500, onTap: _handleSignOut, isDestructive: true),
-            ),
-            const SizedBox(height: 40),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87));
+  // --- КОМПОНЕНТЫ (ВЫНЕСЕНЫ ИЗ BUILD CONTENT ДЛЯ ЧИСТОТЫ) ---
+
+  Widget _buildHeroCard() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade600, Colors.indigo.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: _borderRadius,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.blue.shade300.withOpacity(0.5),
+              blurRadius: 24,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_getGreeting(),
+              style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.white.withOpacity(0.8),
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Text(_masterName,
+              style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 24),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _navigateToTodayBookings,
+              borderRadius: BorderRadius.circular(14),
+              highlightColor: Colors.white.withOpacity(0.1),
+              splashColor: Colors.white.withOpacity(0.2),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.flash_on_rounded,
+                        size: 20, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Сегодня: $_todayBookingsCount ${_getPluralForm(_todayBookingsCount)}',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 14, color: Colors.white.withOpacity(0.7)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildQuickActionCard({required IconData icon, required String label, required Color color, required VoidCallback onTap, bool hasBadge = false}) {
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            _buildQuickActionCard(
+                icon: Icons.add_circle_outline_rounded,
+                label: 'Новая запись',
+                color: Colors.blue,
+                onTap: () {
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId != null) {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                              create: (context) => CreateBookingBloc(
+                                  supabase: Supabase.instance.client,
+                                  masterId: userId)
+                                ..add(LoadInitialData(userId)),
+                              child: const CreateBookingScreen(),
+                            )));
+                  }
+                }),
+            const SizedBox(width: 12),
+            _buildQuickActionCard(
+                icon: Icons.access_time_rounded,
+                label: 'Слоты',
+                color: Colors.green,
+                onTap: _navigateToSchedule),
+            const SizedBox(width: 12),
+            _buildQuickActionCard(
+                icon: Icons.notifications_active_outlined,
+                label: 'Напоминания',
+                color: Colors.orange,
+                hasBadge: true,
+                onTap: () {
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId != null) {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                              create: (context) => RemindersBloc(
+                                  supabase: Supabase.instance.client),
+                              child:
+                                  RemindersManagementScreen(masterId: userId),
+                            )));
+                  }
+                }),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildQuickActionCard(
+                icon: Icons.calendar_month_rounded,
+                label: 'Календарь',
+                color: Colors.indigo,
+                onTap: () {
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId != null) {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => GoogleCalendarSettingsScreen(
+                                masterId: userId)));
+                  }
+                }),
+            const SizedBox(width: 12),
+            _buildQuickActionCard(
+                icon: Icons.settings_outlined,
+                label: 'Настройки',
+                color: Colors.grey.shade700,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('В разработке')))),
+            const SizedBox(width: 12),
+            _buildQuickActionCard(
+                icon: Icons.help_outline_rounded,
+                label: 'Помощь',
+                color: Colors.teal,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('В разработке')))),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildManagementMenu() {
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: _borderRadius,
+          boxShadow: _cardShadow),
+      child: Column(
+        children: [
+          _buildGroupedMenuRow(
+              icon: Icons.book_online_rounded,
+              title: 'Журнал записей',
+              color: Colors.blue.shade600,
+              onTap: _navigateToJournal),
+          Divider(height: 1, indent: 56, color: Colors.grey.shade100),
+          _buildGroupedMenuRow(
+              icon: Icons.calendar_today_rounded,
+              title: 'Мое расписание',
+              color: Colors.green.shade600,
+              onTap: _navigateToSchedule),
+          Divider(height: 1, indent: 56, color: Colors.grey.shade100),
+          _buildGroupedMenuRow(
+              icon: Icons.content_cut_rounded,
+              title: 'Мои услуги',
+              color: Colors.orange.shade600,
+              onTap: _navigateToServices),
+          Divider(height: 1, indent: 56, color: Colors.grey.shade100),
+          _buildGroupedMenuRow(
+              icon: Icons.star_border_rounded,
+              title: 'Отзывы клиентов',
+              color: Colors.amber.shade600,
+              onTap: _navigateToReviews),
+          Divider(height: 1, indent: 56, color: Colors.grey.shade100),
+          _buildGroupedMenuRow(
+              icon: Icons.person_outline_rounded,
+              title: 'Профиль мастера',
+              color: Colors.purple.shade500,
+              onTap: _navigateToProfile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtraMenu() {
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: _borderRadius,
+          boxShadow: _cardShadow),
+      child: _buildGroupedMenuRow(
+          icon: Icons.exit_to_app_rounded,
+          title: 'Выйти из аккаунта',
+          color: Colors.red.shade500,
+          onTap: _handleSignOut,
+          isDestructive: true),
+    );
+  }
+
+  // --- МЕЛКИЕ ВИДЖЕТЫ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+
+  Widget _buildSectionTitle(String title) {
+    return Text(title,
+        style: const TextStyle(
+            fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87));
+  }
+
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool hasBadge = false,
+  }) {
+    // Делаем размеры динамическими: на ПК иконки и кружочки будут больше
+    final isDesktop = ResponsiveLayout.isDesktop(context);
+    final circleSize = isDesktop ? 64.0 : 48.0;
+    final iconSize = isDesktop ? 32.0 : 24.0;
+    final fontSize = isDesktop ? 15.0 : 13.0;
+
     return Expanded(
       child: Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: _cardShadow),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: _cardShadow,
+        ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
+            hoverColor: color.withOpacity(0.05), // Легкий цветной ховер на ПК
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              padding: EdgeInsets.symmetric(
+                vertical: isDesktop ? 24 : 16,
+                horizontal: 8,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -484,33 +638,45 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-                        child: Icon(icon, color: color, size: 24),
+                        width: circleSize,
+                        height: circleSize,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color, size: iconSize),
                       ),
                       if (hasBadge)
                         Positioned(
                           right: -2,
                           top: -2,
                           child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                            width: isDesktop ? 16 : 12,
+                            height: isDesktop ? 16 : 12,
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: isDesktop ? 16 : 10),
                   SizedBox(
-                    height: 32,
+                    height: 36,
                     child: Center(
                       child: AutoSizeText(
                         label,
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         minFontSize: 10,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87, height: 1.2),
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          height: 1.2,
+                        ),
                       ),
                     ),
                   ),
@@ -523,7 +689,12 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
     );
   }
 
-  Widget _buildGroupedMenuRow({required IconData icon, required String title, required Color color, required VoidCallback onTap, bool isDestructive = false}) {
+  Widget _buildGroupedMenuRow(
+      {required IconData icon,
+      required String title,
+      required Color color,
+      required VoidCallback onTap,
+      bool isDestructive = false}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -535,17 +706,23 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, size: 20, color: color),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDestructive ? Colors.red.shade600 : Colors.black87),
-                ),
+                child: Text(title,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDestructive
+                            ? Colors.red.shade600
+                            : Colors.black87)),
               ),
-              Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey.shade300),
+              Icon(Icons.chevron_right_rounded,
+                  size: 20, color: Colors.grey.shade300),
             ],
           ),
         ),
@@ -566,13 +743,17 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
               Shimmer.fromColors(
                 baseColor: Colors.grey.shade200,
                 highlightColor: Colors.grey.shade50,
-                child: Container(height: 90, decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius)),
+                child: Container(
+                    height: 90,
+                    decoration: BoxDecoration(
+                        color: Colors.white, borderRadius: _borderRadius)),
               ),
             ],
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+        if (!snapshot.hasData || snapshot.data!.isEmpty)
+          return const SizedBox.shrink();
 
         final bookings = snapshot.data!;
         return Column(
@@ -584,7 +765,10 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
                 _buildSectionTitle('Ближайшие записи'),
                 TextButton(
                   onPressed: _navigateToJournal,
-                  child: Text('Все', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
+                  child: Text('Все',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade600)),
                 )
               ],
             ),
@@ -617,7 +801,11 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: _cardShadow, border: Border.all(color: Colors.grey.shade100)),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: _cardShadow,
+          border: Border.all(color: Colors.grey.shade100)),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -630,21 +818,34 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), shape: BoxShape.circle),
-                  child: Center(child: Icon(Icons.access_time_filled_rounded, color: statusColor, size: 20)),
+                  decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      shape: BoxShape.circle),
+                  child: Center(
+                      child: Icon(Icons.access_time_filled_rounded,
+                          color: statusColor, size: 20)),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(booking.clientName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      Text(booking.clientName,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
                       const SizedBox(height: 4),
-                      Text(timeLabel, style: TextStyle(fontSize: 14, color: statusColor, fontWeight: FontWeight.w600)),
+                      Text(timeLabel,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: statusColor,
+                              fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey.shade300),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    size: 16, color: Colors.grey.shade300),
               ],
             ),
           ),
@@ -662,33 +863,36 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(height: 160, decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius)),
+            Container(
+                height: 160,
+                decoration: BoxDecoration(
+                    color: Colors.white, borderRadius: _borderRadius)),
             const SizedBox(height: 28),
             Container(height: 24, width: 180, color: Colors.white),
             const SizedBox(height: 16),
             Row(
-              children: List.generate(3, (index) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
-                  height: 110,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))
-                )
-              )),
+              children: List.generate(
+                  3,
+                  (index) => Expanded(
+                      child: Container(
+                          margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
+                          height: 110,
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16))))),
             ),
             const SizedBox(height: 12),
             Row(
-              children: List.generate(3, (index) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
-                  height: 110,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))
-                )
-              )),
+              children: List.generate(
+                  3,
+                  (index) => Expanded(
+                      child: Container(
+                          margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
+                          height: 110,
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16))))),
             ),
-            const SizedBox(height: 28),
-            Container(height: 24, width: 180, color: Colors.white),
-            const SizedBox(height: 16),
-            Container(height: 300, decoration: BoxDecoration(color: Colors.white, borderRadius: _borderRadius)),
           ],
         ),
       ),
@@ -697,7 +901,8 @@ class _MasterHomeScreenState extends State<MasterHomeScreen> {
 
   String _getPluralForm(int count) {
     if (count % 10 == 1 && count % 100 != 11) return 'запись';
-    if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) return 'записи';
+    if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100))
+      return 'записи';
     return 'записей';
   }
 }

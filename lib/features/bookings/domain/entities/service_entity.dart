@@ -4,6 +4,9 @@ class ServiceEntity {
   final String title;
   final int durationMin;
   final double price;
+  // --- НОВЫЕ ПОЛЯ ---
+  final String bookingType; // 'time_slot' или 'daily'
+  final int capacity; // Количество мест (по умолчанию 1)
 
   const ServiceEntity({
     required this.id,
@@ -11,6 +14,8 @@ class ServiceEntity {
     required this.title,
     required this.durationMin,
     required this.price,
+    this.bookingType = 'time_slot',
+    this.capacity = 1,
   });
 
   ServiceEntity copyWith({
@@ -19,6 +24,8 @@ class ServiceEntity {
     String? title,
     int? durationMin,
     double? price,
+    String? bookingType,
+    int? capacity,
   }) {
     return ServiceEntity(
       id: id ?? this.id,
@@ -26,6 +33,8 @@ class ServiceEntity {
       title: title ?? this.title,
       durationMin: durationMin ?? this.durationMin,
       price: price ?? this.price,
+      bookingType: bookingType ?? this.bookingType,
+      capacity: capacity ?? this.capacity,
     );
   }
 
@@ -36,6 +45,8 @@ class ServiceEntity {
       'title': title,
       'duration_min': durationMin,
       'price': price,
+      'booking_type': bookingType,
+      'capacity': capacity,
     };
   }
 
@@ -44,8 +55,10 @@ class ServiceEntity {
       id: json['id'],
       masterId: json['master_id'],
       title: json['title'],
-      durationMin: json['duration_min'],
-      price: (json['price'] as num).toDouble(),
+      durationMin: int.tryParse(json['duration_min'].toString()) ?? 0,
+      price: double.tryParse(json['price'].toString()) ?? 0.0,
+      bookingType: json['booking_type'] ?? 'time_slot',
+      capacity: int.tryParse(json['capacity'].toString()) ?? 1,
     );
   }
 

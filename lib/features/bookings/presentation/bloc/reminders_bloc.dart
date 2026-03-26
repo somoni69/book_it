@@ -106,7 +106,7 @@ class RemindersBloc extends Bloc<RemindersEvent, RemindersState> {
           'service_name': service['title'] as String? ??
               service['name'] as String? ??
               'Услуга',
-          'duration': service['duration_min'] as int? ?? 60,
+          'duration': int.tryParse(service['duration_min'].toString()) ?? 60,
           'comment': booking['comment'] as String?,
           'status': booking['status'] as String,
           'fcm_token': clientTokens[clientId],

@@ -178,6 +178,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
       icon = Icons.directions_car_rounded;
       iconColor = Colors.blueGrey.shade500;
       bgColor = Colors.blueGrey.shade50;
+    } else if (name.contains("хостел") ||
+        name.contains("жил") ||
+        name.contains("посуточн") ||
+        name.contains("аренда") ||
+        name.contains("отель")) {
+      icon = Icons.hotel_rounded;
+      iconColor = Colors.indigo.shade500;
+      bgColor = Colors.indigo.shade50;
     } else {
       icon = Icons.work_outline_rounded;
       iconColor = Colors.blue.shade500;

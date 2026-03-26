@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/presentation/pages/master_setup_page.dart';
 import 'home_wrapper.dart';
-import 'features/bookings/presentation/pages/master_home_screen.dart';
+import 'features/bookings/presentation/pages/master_main_layout.dart';
 
 class RoleBasedHome extends StatefulWidget {
   const RoleBasedHome({super.key});
@@ -91,7 +91,7 @@ class _RoleBasedHomeState extends State<RoleBasedHome> {
       if (_specialtyId == null) {
         return const MasterSetupPage(key: ValueKey('master_setup'));
       }
-      return const MasterHomeScreen(key: ValueKey('master_home'));
+      return const MasterMainLayout(key: ValueKey('master_home'));
     } else {
       // БЫЛО: return const CategoriesPage(key: ValueKey('client_home'));
       // СТАЛО:

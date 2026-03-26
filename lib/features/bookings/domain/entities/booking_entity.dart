@@ -14,6 +14,10 @@ class BookingEntity extends Equatable {
   final String clientName;
   final String masterName;
   final String serviceName;
+  // --- НОВЫЕ ПОЛЯ ---
+  final int quantity; // Сколько мест забронировано (по умолчанию 1)
+  final String bookingType; // 'time_slot' или 'daily'
+  final int? capacity; // Количество гостей (для daily)
 
   const BookingEntity({
     required this.id,
@@ -27,6 +31,9 @@ class BookingEntity extends Equatable {
     this.clientName = 'Аноним',
     this.masterName = 'Мастер',
     this.serviceName = 'Услуга',
+    this.quantity = 1,
+    this.bookingType = 'time_slot',
+    this.capacity,
   });
 
   BookingEntity copyWith({
@@ -41,6 +48,9 @@ class BookingEntity extends Equatable {
     String? clientName,
     String? masterName,
     String? serviceName,
+    int? quantity,
+    String? bookingType,
+    int? capacity,
   }) {
     return BookingEntity(
       id: id ?? this.id,
@@ -54,6 +64,9 @@ class BookingEntity extends Equatable {
       clientName: clientName ?? this.clientName,
       masterName: masterName ?? this.masterName,
       serviceName: serviceName ?? this.serviceName,
+      quantity: quantity ?? this.quantity,
+      bookingType: bookingType ?? this.bookingType,
+      capacity: capacity ?? this.capacity,
     );
   }
 
@@ -70,10 +83,16 @@ class BookingEntity extends Equatable {
       'client_name': clientName,
       'master_name': masterName,
       'service_name': serviceName,
+      'quantity': quantity,
+      'booking_type': bookingType,
+      'capacity': capacity,
     };
   }
 
   factory BookingEntity.fromJson(Map<String, dynamic> json) {
+    // Поддержка вложенной структуры service
+    final service = json['service'] as Map<String, dynamic>?;
+
     return BookingEntity(
       id: json['id'] as String,
       masterId: json['master_id'] as String,
@@ -88,7 +107,14 @@ class BookingEntity extends Equatable {
       comment: json['comment'] as String?,
       clientName: json['client_name'] as String? ?? 'Аноним',
       masterName: json['master_name'] as String? ?? 'Мастер',
-      serviceName: json['service_name'] as String? ?? 'Услуга',
+      serviceName: json['service_name'] as String? ??
+          service?['name'] as String? ??
+          'Услуга',
+      quantity: json['quantity'] as int? ?? 1,
+      bookingType: json['booking_type'] as String? ??
+          service?['booking_type'] as String? ??
+          'time_slot',
+      capacity: json['capacity'] as int? ?? service?['capacity'] as int?,
     );
   }
 
@@ -101,6 +127,8 @@ class BookingEntity extends Equatable {
         clientName,
         masterName,
         serviceName,
+        bookingType,
+        capacity,
       ];
 
   // Хелпер: закончилась ли запись?

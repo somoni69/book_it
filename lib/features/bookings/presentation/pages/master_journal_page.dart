@@ -71,74 +71,12 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text("Журнал записей",
+        title: const Text('Журнал записей',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
         centerTitle: true,
-        elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.05),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            onSelected: (value) async {
-              if (value == 'schedule') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const MasterSchedulePage()));
-              } else if (value == 'services') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const MasterServicesPage()));
-              } else if (value == 'logout') {
-                await Supabase.instance.client.auth.signOut();
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem(
-                value: 'schedule',
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_month_rounded,
-                        size: 20, color: Colors.blue),
-                    SizedBox(width: 12),
-                    Text('График работы'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'services',
-                child: Row(
-                  children: [
-                    Icon(Icons.content_cut_rounded,
-                        size: 20, color: Colors.orange),
-                    SizedBox(width: 12),
-                    Text('Мои услуги'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_rounded,
-                        color: Colors.red.shade400, size: 20),
-                    const SizedBox(width: 12),
-                    Text('Выйти',
-                        style: TextStyle(
-                            color: Colors.red.shade400,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        elevation: 1,
       ),
       body: Column(
         children: [
@@ -359,6 +297,12 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
         statusText = 'Ожидает';
     }
 
+    // Определяем тип брони
+    final isDaily = booking.bookingType == 'daily';
+    int nights = booking.endTime.difference(booking.startTime).inDays;
+    if (nights == 0) nights = 1;
+    final guests = booking.capacity ?? 1;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -387,12 +331,17 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          "${DateFormat('HH:mm').format(booking.startTime)} - ${DateFormat('HH:mm').format(booking.endTime)}",
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87),
+                        // УМНОЕ ВРЕМЯ/ДАТА
+                        Expanded(
+                          child: Text(
+                            isDaily
+                                ? "${DateFormat('d MMM').format(booking.startTime)} - ${DateFormat('d MMM').format(booking.endTime)} ($nights ночи)"
+                                : "${DateFormat('HH:mm').format(booking.startTime)} - ${DateFormat('HH:mm').format(booking.endTime)}",
+                            style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87),
+                          ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -408,6 +357,15 @@ class _MasterJournalPageState extends State<MasterJournalPage> {
                         ),
                       ],
                     ),
+                    // Показываем количество гостей для хостела
+                    if (isDaily) ...[
+                      const SizedBox(height: 4),
+                      Text('👤 $guests гостя',
+                          style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500)),
+                    ],
                     const SizedBox(height: 12),
                     Divider(height: 1, color: Colors.grey.shade100),
                     const SizedBox(height: 12),

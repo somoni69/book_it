@@ -60,8 +60,8 @@ class CreateBookingBloc extends Bloc<CreateBookingEvent, CreateBookingState> {
           .map((s) => {
                 'id': s['id'] as String,
                 'name': s['name'] as String,
-                'duration': s['duration_min'] as int,
-                'price': s['price_som'] as int,
+                'duration': int.tryParse(s['duration_min'].toString()) ?? 0,
+                'price': int.tryParse(s['price_som'].toString()) ?? 0,
               })
           .toList();
 

@@ -1,5 +1,3 @@
-// booking_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -76,13 +74,17 @@ class _BookingPageState extends State<BookingPage> {
   // --- ЕДИНЫЕ СТИЛИ ---
   final BorderRadius _borderRadius = BorderRadius.circular(16);
   final List<BoxShadow> _cardShadow = [
-    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4)),
+    BoxShadow(
+        color: Colors.black.withOpacity(0.03),
+        blurRadius: 12,
+        offset: const Offset(0, 4)),
   ];
 
   @override
   void initState() {
     super.initState();
-    _dates = List.generate(30, (index) => DateTime.now().add(Duration(days: index)));
+    _dates =
+        List.generate(30, (index) => DateTime.now().add(Duration(days: index)));
     _selectedDate = _dates.first;
   }
 
@@ -114,7 +116,8 @@ class _BookingPageState extends State<BookingPage> {
 
           if (state.submissionStatus == BookingSubmissionStatus.success) {
             _showSuccessDialog();
-          } else if (state.submissionStatus == BookingSubmissionStatus.failure) {
+          } else if (state.submissionStatus ==
+              BookingSubmissionStatus.failure) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("❌ Ошибка при записи"),
@@ -128,7 +131,8 @@ class _BookingPageState extends State<BookingPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
-          title: const Text('Дата и время', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
+          title: const Text('Дата и время',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
           centerTitle: true,
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
@@ -142,7 +146,11 @@ class _BookingPageState extends State<BookingPage> {
             _buildDateSelector(),
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Text('Свободное время', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              child: Text('Свободное время',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
             ),
             Expanded(
               child: BlocBuilder<BookingBloc, BookingState>(
@@ -176,21 +184,36 @@ class _BookingPageState extends State<BookingPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.content_cut_rounded, color: Colors.blue.shade700, size: 24),
+            decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.content_cut_rounded,
+                color: Colors.blue.shade700, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.service.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                Text(widget.service.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87)),
                 const SizedBox(height: 4),
-                Text(widget.masterName, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                Text(widget.masterName,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500)),
               ],
             ),
           ),
-          Text('${widget.service.price.toStringAsFixed(0)} с.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green.shade700)),
+          Text('${widget.service.price.toStringAsFixed(0)} с.',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.green.shade700)),
         ],
       ),
     );
@@ -198,10 +221,15 @@ class _BookingPageState extends State<BookingPage> {
 
   Widget _buildDateSelector() {
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.only(bottom: 16, top: 8),
       decoration: BoxDecoration(
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: SizedBox(
         height: 85,
@@ -213,8 +241,12 @@ class _BookingPageState extends State<BookingPage> {
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
             final date = _dates[index];
-            final isSelected = date.year == _selectedDate.year && date.month == _selectedDate.month && date.day == _selectedDate.day;
-            final isToday = date.year == DateTime.now().year && date.month == DateTime.now().month && date.day == DateTime.now().day;
+            final isSelected = date.year == _selectedDate.year &&
+                date.month == _selectedDate.month &&
+                date.day == _selectedDate.day;
+            final isToday = date.year == DateTime.now().year &&
+                date.month == DateTime.now().month &&
+                date.day == DateTime.now().day;
 
             return GestureDetector(
               onTap: () => _onDateSelected(date),
@@ -222,10 +254,22 @@ class _BookingPageState extends State<BookingPage> {
                 duration: const Duration(milliseconds: 200),
                 width: 64,
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue.shade600 : (isToday ? Colors.blue.shade50 : Colors.white),
+                  color: isSelected
+                      ? Colors.blue.shade600
+                      : (isToday ? Colors.blue.shade50 : Colors.white),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isSelected ? Colors.blue.shade600 : Colors.grey.shade200),
-                  boxShadow: isSelected ? [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                  border: Border.all(
+                      color: isSelected
+                          ? Colors.blue.shade600
+                          : Colors.grey.shade200),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                              color: Colors.blue.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4))
+                        ]
+                      : [],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -235,7 +279,11 @@ class _BookingPageState extends State<BookingPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white70 : (isToday ? Colors.blue.shade700 : Colors.grey.shade500),
+                        color: isSelected
+                            ? Colors.white70
+                            : (isToday
+                                ? Colors.blue.shade700
+                                : Colors.grey.shade500),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -267,8 +315,8 @@ class _BookingPageState extends State<BookingPage> {
         children: slots.map((slot) {
           final timeStr = _formatTime(slot.startTime);
           // НАДЕЖНАЯ ПРОВЕРКА ПО ВРЕМЕНИ, А НЕ ПО ССЫЛКЕ НА ОБЪЕКТ
-          final isSelected = selectedSlot?.startTime == slot.startTime; 
-          
+          final isSelected = selectedSlot?.startTime == slot.startTime;
+
           return GestureDetector(
             onTap: slot.isAvailable
                 ? () {
@@ -288,10 +336,17 @@ class _BookingPageState extends State<BookingPage> {
                 border: Border.all(
                   color: isSelected
                       ? Colors.black87
-                      : (slot.isAvailable ? Colors.grey.shade300 : Colors.transparent),
+                      : (slot.isAvailable
+                          ? Colors.grey.shade300
+                          : Colors.transparent),
                 ),
                 boxShadow: isSelected
-                    ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))]
+                    ? [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4))
+                      ]
                     : [],
               ),
               alignment: Alignment.center,
@@ -303,7 +358,8 @@ class _BookingPageState extends State<BookingPage> {
                   color: slot.isAvailable
                       ? (isSelected ? Colors.white : Colors.black87)
                       : Colors.grey.shade400,
-                  decoration: !slot.isAvailable ? TextDecoration.lineThrough : null,
+                  decoration:
+                      !slot.isAvailable ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),
@@ -318,7 +374,8 @@ class _BookingPageState extends State<BookingPage> {
       builder: (context, state) {
         bool isSubmitting = false;
         if (state is BookingLoaded) {
-          isSubmitting = state.submissionStatus == BookingSubmissionStatus.submitting;
+          isSubmitting =
+              state.submissionStatus == BookingSubmissionStatus.submitting;
         }
 
         return TweenAnimationBuilder<double>(
@@ -331,11 +388,18 @@ class _BookingPageState extends State<BookingPage> {
               child: Opacity(
                 opacity: value,
                 child: Container(
-                  padding: const EdgeInsets.all(20).copyWith(bottom: MediaQuery.of(context).padding.bottom + 20),
+                  padding: const EdgeInsets.all(20).copyWith(
+                      bottom: MediaQuery.of(context).padding.bottom + 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5))
+                    ],
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   child: SafeArea(
                     child: Column(
@@ -343,11 +407,15 @@ class _BookingPageState extends State<BookingPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.event_available_rounded, color: Colors.blue.shade600, size: 20),
+                            Icon(Icons.event_available_rounded,
+                                color: Colors.blue.shade600, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               '${DateFormat('d MMMM', 'ru_RU').format(_selectedDate)} в $_selectedTime',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                              style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87),
                             ),
                           ],
                         ),
@@ -358,17 +426,27 @@ class _BookingPageState extends State<BookingPage> {
                           child: ElevatedButton(
                             onPressed: isSubmitting
                                 ? null
-                                : () => context.read<BookingBloc>().add(ConfirmBooking(widget.service.id)),
+                                : () => context
+                                    .read<BookingBloc>()
+                                    .add(ConfirmBooking(widget.service.id)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue.shade600,
                               foregroundColor: Colors.white,
                               elevation: 4,
                               shadowColor: Colors.blue.withOpacity(0.4),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
                             ),
                             child: isSubmitting
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Подтвердить запись', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2))
+                                : const Text('Подтвердить запись',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -396,16 +474,24 @@ class _BookingPageState extends State<BookingPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                child: Icon(Icons.check_circle_rounded, color: Colors.green.shade500, size: 48),
+                decoration: BoxDecoration(
+                    color: Colors.green.shade50, shape: BoxShape.circle),
+                child: Icon(Icons.check_circle_rounded,
+                    color: Colors.green.shade500, size: 48),
               ),
               const SizedBox(height: 24),
-              const Text('Вы успешно записаны!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87), textAlign: TextAlign.center),
+              const Text('Вы успешно записаны!',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 12),
               Text(
                 'Ждем вас ${DateFormat('d MMMM', 'ru_RU').format(_selectedDate)} в $_selectedTime\nу мастера ${widget.masterName}.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: Colors.grey.shade600, height: 1.4),
+                style: TextStyle(
+                    fontSize: 15, color: Colors.grey.shade600, height: 1.4),
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -418,9 +504,12 @@ class _BookingPageState extends State<BookingPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Отлично', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text('Отлично',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -437,9 +526,12 @@ class _BookingPageState extends State<BookingPage> {
         children: [
           Icon(Icons.event_busy_rounded, size: 56, color: Colors.grey.shade400),
           const SizedBox(height: 16),
-          const Text('Нет свободного времени', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Нет свободного времени',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('На эту дату все занято.\nВыберите другой день.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade500, height: 1.4)),
+          Text('На эту дату все занято.\nВыберите другой день.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade500, height: 1.4)),
         ],
       ),
     );
@@ -450,13 +542,17 @@ class _BookingPageState extends State<BookingPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline_rounded, size: 56, color: Colors.red.shade300),
+          Icon(Icons.error_outline_rounded,
+              size: 56, color: Colors.red.shade300),
           const SizedBox(height: 16),
-          const Text('Ошибка загрузки', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Ошибка загрузки',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(message, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+            child: Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600)),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -485,11 +581,15 @@ class _BookingPageState extends State<BookingPage> {
         child: Wrap(
           spacing: 12,
           runSpacing: 16,
-          children: List.generate(9, (index) => Container(
-            width: (MediaQuery.of(context).size.width - 40 - 24) / 3,
-            height: 50,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          )),
+          children: List.generate(
+              9,
+              (index) => Container(
+                    width: (MediaQuery.of(context).size.width - 40 - 24) / 3,
+                    height: 50,
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12)),
+                  )),
         ),
       ),
     );

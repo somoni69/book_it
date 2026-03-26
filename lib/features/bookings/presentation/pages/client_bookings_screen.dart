@@ -174,11 +174,23 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen>
     final master = booking['master'] ?? {};
     final service = booking['service'] ?? {};
     final startTime = DateTime.parse(booking['start_time']);
+    // Пытаемся достать end_time, если его нет — берем start_time
+    final endTimeStr = booking['end_time'];
+    final endTime = endTimeStr != null ? DateTime.parse(endTimeStr) : startTime;
 
     final masterName = master['full_name'] ?? 'Мастер';
     final masterAvatar = master['avatar_url'];
-    final serviceName = service['name'] ?? 'Услуга';
+    final serviceName = service['name'] ?? service['title'] ?? 'Услуга';
     final price = service['price'] ?? 0;
+
+    // Определяем тип брони и вместимость
+    final bookingType = service['booking_type'] ?? 'time_slot';
+    final isDaily = bookingType == 'daily';
+    final capacity = booking['capacity'] ?? service['capacity'] ?? 1;
+
+    // Считаем ночи (минимум 1)
+    int nights = endTime.difference(startTime).inDays;
+    if (nights == 0) nights = 1;
 
     return Container(
       decoration: BoxDecoration(
@@ -189,42 +201,66 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Шапка карточки (Дата и Время)
+          // Шапка карточки (УМНАЯ)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: isDaily ? Colors.indigo.shade50 : Colors.grey.shade50,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(16))),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.calendar_month_rounded,
-                        size: 18, color: Colors.blue.shade600),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat('d MMMM yyyy', 'ru_RU').format(startTime),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                      color: Colors.blue.shade100.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    DateFormat('HH:mm').format(startTime),
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                        fontSize: 13),
+                if (isDaily) ...[
+                  // --- UI ДЛЯ ПОСУТОЧНОЙ АРЕНДЫ ---
+                  Icon(Icons.nights_stay_rounded,
+                      size: 18, color: Colors.indigo.shade600),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${DateFormat('d MMM', 'ru_RU').format(startTime)} — ${DateFormat('d MMM', 'ru_RU').format(endTime)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
-                ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: Colors.indigo.shade100.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      '$nights ночи • $capacity гостя',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo.shade700,
+                          fontSize: 12),
+                    ),
+                  ),
+                ] else ...[
+                  // --- UI ДЛЯ ПОЧАСОВОЙ ЗАПИСИ ---
+                  Icon(Icons.calendar_month_rounded,
+                      size: 18, color: Colors.blue.shade600),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat('d MMMM yyyy', 'ru_RU').format(startTime),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: Colors.blue.shade100.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      DateFormat('HH:mm').format(startTime),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                          fontSize: 13),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

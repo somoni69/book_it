@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../data/repositories/service_repository_impl.dart';
 import '../../domain/entities/service_entity.dart';
-import 'booking_page.dart'; // Экран выбора времени (РАСКОММЕНТИРОВАНО!)
+import 'booking_page.dart';
+import 'daily_booking_screen.dart';
+import '../../../chat/presentation/pages/chat_screen.dart';
 
 class ServiceSelectionPage extends StatefulWidget {
   final String masterId;
@@ -41,7 +43,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   }
 
   Future<(Map<String, dynamic>?, List<ServiceEntity>)> _loadData() async {
-    // Параллельная загрузка профиля мастера и его услуг
     final profileFuture =
         _supabase.from('profiles').select().eq('id', widget.masterId).single();
     final servicesFuture =
@@ -58,7 +59,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     setState(() {
       _futureData = _loadData();
     });
-    return _futureData; // для RefreshIndicator
+    return _futureData;
   }
 
   String _formatDuration(int minutes) {
@@ -68,26 +69,237 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return mins == 0 ? '$hours ч' : '$hours ч $mins мин';
   }
 
+  // ==========================================
+  // НОВОЕ: Всплывающее окно для создания отзыва
+  // ==========================================
+  void _showReviewBottomSheet() {
+    int selectedStars = 5;
+    final commentController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(builder: (context, setModalState) {
+        return Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              top: 24,
+              left: 24,
+              right: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Оцените специалиста',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+
+              // Звездочки
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    iconSize: 40,
+                    icon: Icon(
+                      index < selectedStars
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: Colors.amber.shade500,
+                    ),
+                    onPressed: () =>
+                        setModalState(() => selectedStars = index + 1),
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+
+              // Комментарий
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Что вам понравилось?',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.blue.shade400)),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Кнопка отправки
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          setModalState(() => isSubmitting = true);
+                          try {
+                            final clientId = _supabase.auth.currentUser!.id;
+
+                            // 1. Просто отправляем отзыв. Всё остальное база сделает сама!
+                            await _supabase.from('reviews').insert({
+                              'master_id': widget.masterId,
+                              'client_id': clientId,
+                              'rating': selectedStars,
+                              'comment': commentController.text.trim(),
+                            });
+
+                            // 2. Ждем долю секунды, чтобы триггер в базе успел сработать
+                            await Future.delayed(
+                                const Duration(milliseconds: 300));
+
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Спасибо за отзыв!'),
+                                      backgroundColor: Colors.green));
+                              _refresh(); // Обновляем экран с новыми цифрами
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Ошибка: $e'),
+                                backgroundColor: Colors.red));
+                          } finally {
+                            setModalState(() => isSubmitting = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('Отправить',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
   void _proceedToBooking() {
     if (_selectedService == null) return;
 
-    // Находим оригинальный ServiceEntity из списка
     final originalServiceEntity = _futureData.then((data) {
       final services = data.$2;
       return services.firstWhere((s) => s.id == _selectedService!['id']);
     });
 
     originalServiceEntity.then((serviceEntity) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingPageWrapper(
-            masterName: _masterData?['full_name'] ?? 'Мастер',
-            service: serviceEntity,
+      if (serviceEntity.bookingType == 'daily') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DailyBookingScreenWrapper(
+              service: serviceEntity,
+              masterId: widget.masterId,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingPageWrapper(
+              masterName: _masterData?['full_name'] ?? 'Мастер',
+              service: serviceEntity,
+            ),
+          ),
+        );
+      }
     });
+  }
+
+  Future<void> _startChatWithMaster() async {
+    if (_masterData == null) return;
+
+    final supabase = Supabase.instance.client;
+    final currentUser = supabase.auth.currentUser!;
+    final masterId = _masterData!['id'];
+
+    try {
+      // 1. Ищем, есть ли уже чат между мной и этим мастером
+      final response = await supabase
+          .from('chats')
+          .select()
+          .or('and(user1_id.eq.${currentUser.id},user2_id.eq.$masterId),and(user1_id.eq.$masterId,user2_id.eq.${currentUser.id})')
+          .maybeSingle();
+
+      String chatId;
+
+      if (response != null) {
+        // Чат уже есть! Берем его ID
+        chatId = response['id'];
+      } else {
+        // 2. Чата нет. Создаем новый!
+        final myProfile = await supabase
+            .from('profiles')
+            .select()
+            .eq('id', currentUser.id)
+            .single();
+
+        final newChat = await supabase
+            .from('chats')
+            .insert({
+              'user1_id': currentUser.id,
+              'user1_name': myProfile['full_name'],
+              'user1_avatar': myProfile['avatar_url'],
+              'user2_id': masterId,
+              'user2_name': _masterData!['full_name'],
+              'user2_avatar': _masterData!['avatar_url'],
+            })
+            .select()
+            .single();
+
+        chatId = newChat['id'];
+      }
+
+      // 3. Открываем ChatScreen
+      if (mounted) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatScreen(
+                chatId: chatId,
+                partnerId: masterId,
+                partnerName: _masterData!['full_name'] ?? 'Специалист',
+                partnerAvatar: _masterData!['avatar_url'],
+              ),
+            ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка создания чата: $e')));
+      }
+    }
   }
 
   @override
@@ -117,13 +329,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             }
             final master = snapshot.data!.$1;
             final services = snapshot.data!.$2;
-            _masterData = master; // сохраняем для нижней панели
+            _masterData = master;
 
             return _buildContent(master, services);
           },
         ),
       ),
-      // Плавающая панель снизу (появляется при выборе услуги)
       bottomNavigationBar: _selectedService != null ? _buildBottomBar() : null,
     );
   }
@@ -150,8 +361,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           ),
         ),
-
-        // Показываем пустой стейт прямо в скролле, чтобы шапка мастера оставалась видна
         if (services.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -160,7 +369,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         else
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16)
-                .copyWith(bottom: 100), // отступ под BottomBar
+                .copyWith(bottom: 100),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Padding(
@@ -180,6 +389,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final avatarUrl = master['avatar_url'];
     final specialization = master['specialization'] ?? 'Специалист';
 
+    // Получаем рейтинг (безопасно конвертируем в double)
+    final rating = (master['rating'] as num?)?.toDouble() ?? 5.0;
+    final reviewsCount = master['reviews_count'] ?? 0;
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -190,6 +403,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 64,
@@ -201,12 +415,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
             child: ClipOval(
               child: avatarUrl != null && avatarUrl.toString().isNotEmpty
-                  ? Image.network(
-                      avatarUrl,
+                  ? Image.network(avatarUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildFallbackAvatar(fullName),
-                    )
+                      errorBuilder: (c, e, s) => _buildFallbackAvatar(fullName))
                   : _buildFallbackAvatar(fullName),
             ),
           ),
@@ -229,7 +440,62 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         fontSize: 14,
                         color: Colors.blue.shade700,
                         fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+
+                // ==========================================
+                // НОВОЕ: Кликабельный рейтинг!
+                // ==========================================
+                GestureDetector(
+                  onTap: _showReviewBottomSheet,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star_rounded,
+                            size: 16, color: Colors.amber.shade600),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade800,
+                              fontSize: 13),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '($reviewsCount отзывов) • Оценить',
+                          style: TextStyle(
+                              color: Colors.amber.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
+            ),
+          ),
+          // ==========================================
+          // НОВОЕ: Кнопка ЧАТА справа от профиля!
+          // ==========================================
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon:
+                  Icon(Icons.chat_bubble_rounded, color: Colors.blue.shade600),
+              onPressed: _startChatWithMaster,
+              tooltip: 'Написать специалисту',
             ),
           ),
         ],
@@ -251,6 +517,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   Widget _buildServiceCard(ServiceEntity service) {
     final isSelected = _selectedService?['id'] == service.id;
+    final isDaily = service.bookingType == 'daily';
 
     return GestureDetector(
       onTap: () {
@@ -259,18 +526,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             'id': service.id,
             'name': service.title,
             'price': service.price,
-            'duration_min':
-                service.durationMin, // ИСПРАВЛЕНО: нужно для BookingPage
+            'duration_min': service.durationMin,
+            'booking_type': service.bookingType,
           };
         });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
+          color: isSelected
+              ? (isDaily ? Colors.indigo.shade50 : Colors.blue.shade50)
+              : Colors.white,
           borderRadius: _borderRadius,
           border: Border.all(
-            color: isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
+            color: isSelected
+                ? (isDaily ? Colors.indigo.shade400 : Colors.blue.shade400)
+                : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected ? [] : _cardShadow,
@@ -279,17 +550,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Кастомный радио-индикатор
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? Colors.blue.shade600 : Colors.transparent,
+                  color: isSelected
+                      ? (isDaily
+                          ? Colors.indigo.shade600
+                          : Colors.blue.shade600)
+                      : Colors.transparent,
                   border: Border.all(
                     color: isSelected
-                        ? Colors.blue.shade600
+                        ? (isDaily
+                            ? Colors.indigo.shade600
+                            : Colors.blue.shade600)
                         : Colors.grey.shade300,
                     width: 2,
                   ),
@@ -300,8 +576,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                     : null,
               ),
               const SizedBox(width: 16),
-
-              // Информация об услуге
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,21 +588,30 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.schedule_rounded,
-                            size: 14, color: Colors.grey.shade500),
+                        Icon(
+                            isDaily
+                                ? Icons.nights_stay_rounded
+                                : Icons.schedule_rounded,
+                            size: 14,
+                            color: isDaily
+                                ? Colors.indigo.shade400
+                                : Colors.grey.shade500),
                         const SizedBox(width: 4),
-                        Text(_formatDuration(service.durationMin),
+                        Text(
+                            isDaily
+                                ? 'Посуточно'
+                                : _formatDuration(service.durationMin),
                             style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: isDaily
+                                    ? Colors.indigo.shade600
+                                    : Colors.grey.shade600,
                                 fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ],
                 ),
               ),
-
-              // Цена
               Text('${service.price.toStringAsFixed(0)} с.',
                   style: TextStyle(
                       fontSize: 16,
@@ -342,7 +625,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   }
 
   Widget _buildBottomBar() {
-    final price = (_selectedService!['price'] as num).toDouble();
+    final price = double.tryParse(_selectedService!['price'].toString()) ?? 0.0;
+    final isDaily = _selectedService!['booking_type'] == 'daily';
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -384,6 +668,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87)),
+                        if (isDaily)
+                          Text('за 1 ночь',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey.shade500)),
                       ],
                     ),
                   ),
@@ -394,21 +682,28 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       child: ElevatedButton(
                         onPressed: _proceedToBooking,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
+                          backgroundColor: isDaily
+                              ? Colors.indigo.shade600
+                              : Colors.blue.shade600,
                           foregroundColor: Colors.white,
                           elevation: 4,
-                          shadowColor: Colors.blue.withOpacity(0.4),
+                          shadowColor: (isDaily ? Colors.indigo : Colors.blue)
+                              .withOpacity(0.4),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Выбрать время',
-                                style: TextStyle(
+                            Text(isDaily ? 'Выбрать даты' : 'Выбрать время',
+                                style: const TextStyle(
                                     fontSize: 15, fontWeight: FontWeight.bold)),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Icon(
+                                isDaily
+                                    ? Icons.date_range_rounded
+                                    : Icons.arrow_forward_rounded,
+                                size: 20),
                           ],
                         ),
                       ),

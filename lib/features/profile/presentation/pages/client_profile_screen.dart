@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../bookings/presentation/pages/client_bookings_screen.dart';
 import '../../../favorites/presentation/pages/favorites_screen.dart';
 
@@ -52,8 +53,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 
   Future<void> _signOut() async {
     await _supabase.auth.signOut();
-    Navigator.pushReplacementNamed(
-        context, '/login'); // Твой роут на авторизацию
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
   }
 
   @override

@@ -29,4 +29,13 @@ abstract class BookingRepository {
   Future<List<ServiceEntity>> getServices(String masterId);
 
   Future<List<WorkingHourEntity>> getSchedule(String masterId);
+
+  /// ПОСУТОЧНАЯ ШАХМАТКА: Получает загруженность хостела на месяц.
+  /// Принимает [serviceId] (конкретная койка/комната) и [month] (первое число месяца).
+  /// Возвращает Map<Число_Месяца, Кол-во_Свободных_Мест>.
+  /// Например: {1: 8, 2: 7, 3: 0, 4: 8...}
+  Future<Map<int, int>> getHostelOccupancy({
+    required String serviceId,
+    required DateTime month,
+  });
 }

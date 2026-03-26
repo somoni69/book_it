@@ -29,8 +29,43 @@ class ServiceRepositoryImpl implements ServiceRepository {
   @override
   Future<ServiceEntity> createService(ServiceEntity service) async {
     try {
-      // Получаем организацию мастера (пока hardcode)
-      const orgId = 'd5d6cd49-d1d4-4372-971f-1d497bdb6c0e';
+      // Get the master's organization or use default
+      String? orgId;
+
+      // Try to get organization from the master's profile
+      final profileResponse = await _supabaseClient
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', service.masterId)
+          .maybeSingle();
+
+      if (profileResponse != null &&
+          profileResponse['organization_id'] != null) {
+        orgId = profileResponse['organization_id'] as String;
+      } else {
+        // Fallback: try to get or create organization for this master
+        final existingOrg = await _supabaseClient
+            .from('organizations')
+            .select('id')
+            .eq('owner_id', service.masterId)
+            .maybeSingle();
+
+        if (existingOrg != null) {
+          orgId = existingOrg['id'] as String;
+        } else {
+          // Create a new organization for this master
+          final newOrg = await _supabaseClient
+              .from('organizations')
+              .insert({
+                'name': 'Personal Business',
+                'owner_id': service.masterId,
+                'type': 'individual',
+              })
+              .select()
+              .single();
+          orgId = newOrg['id'] as String;
+        }
+      }
 
       final data = {
         'master_id': service.masterId,
@@ -38,6 +73,8 @@ class ServiceRepositoryImpl implements ServiceRepository {
         'title': service.title,
         'price': service.price,
         'duration_min': service.durationMin,
+        'booking_type': service.bookingType,
+        'capacity': service.capacity,
       };
 
       final response =
@@ -58,6 +95,8 @@ class ServiceRepositoryImpl implements ServiceRepository {
         'title': service.title,
         'price': service.price,
         'duration_min': service.durationMin,
+        'booking_type': service.bookingType,
+        'capacity': service.capacity,
       };
 
       final response = await _supabaseClient

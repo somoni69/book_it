@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:image_picker/image_picker.dart'; // Добавлен импорт
 import '../../../auth/data/repositories/auth_repository_impl.dart';
 
 class MasterProfileScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
   Map<String, dynamic>? _profileData;
   bool _isLoading = true;
   bool _isEditing = false;
+  bool _isUploadingAvatar = false; // Флаг для загрузки фото
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -75,6 +78,44 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
     }
   }
 
+  // --- НОВЫЙ МЕТОД: ВЫБОР И ЗАГРУЗКА ФОТО ---
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final picker = ImagePicker();
+      // Выбираем фото из галереи, сразу сжимаем, чтобы не грузить 10МБ файлы
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return; // Пользователь отменил выбор
+
+      setState(() => _isUploadingAvatar = true);
+
+      final file = File(pickedFile.path);
+      final newAvatarUrl = await _authRepo.uploadAvatar(XFile(pickedFile.path));
+  
+      if (mounted) {
+        setState(() {
+          _profileData!['avatar_url'] = newAvatarUrl;
+          _isUploadingAvatar = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Фото успешно обновлено'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки фото: $e'), backgroundColor: Colors.red.shade600, behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (!_isEditing) return;
 
@@ -89,7 +130,6 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
         'instagram_url': _instagramController.text.trim(),
       };
 
-      // Исправление: если поле пустое, отправляем null (очищаем в БД)
       updates['experience_years'] = _experienceController.text.trim().isNotEmpty 
           ? int.tryParse(_experienceController.text.trim()) 
           : null;
@@ -222,25 +262,35 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: CircleAvatar(
-                        radius: 46,
-                        backgroundColor: Colors.blue.shade50,
-                        backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                        child: (avatarUrl == null || avatarUrl.isEmpty) 
-                            ? Text(fullName.isNotEmpty ? fullName[0].toUpperCase() : '?', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blue.shade700)) 
-                            : null,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 46,
+                            backgroundColor: Colors.blue.shade50,
+                            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                            child: (avatarUrl == null || avatarUrl.isEmpty) 
+                                ? Text(fullName.isNotEmpty ? fullName[0].toUpperCase() : '?', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blue.shade700)) 
+                                : null,
+                          ),
+                          // Полупрозрачный слой загрузки поверх фото
+                          if (_isUploadingAvatar)
+                            Container(
+                              width: 92,
+                              height: 92,
+                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+                              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                            ),
+                        ],
                       ),
                     ),
                     // Кнопка загрузки аватара в режиме редактирования
-                    if (_isEditing)
+                    if (_isEditing && !_isUploadingAvatar)
                       Positioned(
                         bottom: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () {
-                            // TODO: Реализовать загрузку изображения в Supabase Storage
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Загрузка фото в разработке')));
-                          },
+                          onTap: _pickAndUploadAvatar,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(color: Colors.blue.shade600, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),

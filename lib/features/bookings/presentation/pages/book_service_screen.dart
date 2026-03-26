@@ -198,13 +198,17 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
               },
               calendarFormat: CalendarFormat.month,
               startingDayOfWeek: StartingDayOfWeek.monday,
-              availableGestures: AvailableGestures.horizontalSwipe, // Отключаем вертикальный свайп, чтобы не конфликтовал со скроллом
+              availableGestures: AvailableGestures
+                  .horizontalSwipe, // Отключаем вертикальный свайп, чтобы не конфликтовал со скроллом
               headerStyle: HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
-                titleTextStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                leftChevronIcon: Icon(Icons.chevron_left, color: Colors.blue.shade700),
-                rightChevronIcon: Icon(Icons.chevron_right, color: Colors.blue.shade700),
+                titleTextStyle:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                leftChevronIcon:
+                    Icon(Icons.chevron_left, color: Colors.blue.shade700),
+                rightChevronIcon:
+                    Icon(Icons.chevron_right, color: Colors.blue.shade700),
               ),
               calendarStyle: CalendarStyle(
                 todayDecoration: BoxDecoration(
@@ -212,22 +216,34 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.blue.shade200, width: 1),
                 ),
-                todayTextStyle: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.w600),
+                todayTextStyle: TextStyle(
+                    color: Colors.blue.shade900, fontWeight: FontWeight.w600),
                 selectedDecoration: BoxDecoration(
-                  color: Colors.blue.shade600,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
-                  ]
-                ),
-                selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                defaultTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+                    color: Colors.blue.shade600,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.blue.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4))
+                    ]),
+                selectedTextStyle: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+                defaultTextStyle:
+                    const TextStyle(fontSize: 14, color: Colors.black87),
                 weekendTextStyle: const TextStyle(color: Colors.redAccent),
-                outsideTextStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                outsideTextStyle:
+                    TextStyle(fontSize: 14, color: Colors.grey.shade400),
               ),
               daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
-                weekendStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red.shade300),
+                weekdayStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600),
+                weekendStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red.shade300),
               ),
             ),
           ],
@@ -241,7 +257,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,11 +268,18 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Выберите время', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const Text('Выберите время',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87)),
                 const SizedBox(height: 4),
                 Text(
                   _getFormattedDate(_selectedDate),
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -274,7 +298,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
 
   Widget _buildTimeSlotsGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8).copyWith(bottom: 24), // Отступ снизу для красоты
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8)
+          .copyWith(bottom: 24), // Отступ снизу для красоты
       physics: const BouncingScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
@@ -330,13 +355,18 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
-            child: Icon(Icons.event_busy, size: 48, color: Colors.grey.shade400),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade100, shape: BoxShape.circle),
+            child:
+                Icon(Icons.event_busy, size: 48, color: Colors.grey.shade400),
           ),
           const SizedBox(height: 16),
           const Text(
             'Нет доступного времени',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87),
           ),
           const SizedBox(height: 8),
           Text(
@@ -349,11 +379,15 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     );
   }
 
-  Widget _buildTimeSlotChip({required String time, required bool isSelected, required bool isAvailable}) {
+  Widget _buildTimeSlotChip(
+      {required String time,
+      required bool isSelected,
+      required bool isAvailable}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: isAvailable ? () => setState(() => _selectedTimeSlot = time) : null,
+        onTap:
+            isAvailable ? () => setState(() => _selectedTimeSlot = time) : null,
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -369,7 +403,12 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected
-                ? [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
+                ? [
+                    BoxShadow(
+                        color: Colors.blue.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))
+                  ]
                 : [],
           ),
           child: Center(
@@ -388,7 +427,11 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                 ),
                 if (!isAvailable) ...[
                   const SizedBox(height: 2),
-                  Text('Занято', style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                  Text('Занято',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500)),
                 ],
               ],
             ),
@@ -402,11 +445,18 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
     final isEnabled = _selectedTimeSlot != null;
 
     return Container(
-      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 32), // Padding с учетом Safe Area iPhone/Android
+      padding: const EdgeInsets.only(
+          top: 16,
+          left: 24,
+          right: 24,
+          bottom: 32), // Padding с учетом Safe Area iPhone/Android
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5))
         ],
       ),
       child: SafeArea(
@@ -420,7 +470,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
               disabledBackgroundColor: Colors.grey.shade200,
               foregroundColor: Colors.white,
               disabledForegroundColor: Colors.grey.shade500,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               elevation: isEnabled ? 4 : 0,
               shadowColor: Colors.blue.withOpacity(0.4),
             ),
@@ -456,17 +507,21 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       );
 
       if (added) {
-        _showSuccessDialog(message: 'Запись создана и добавлена в ваш календарь!');
+        _showSuccessDialog(
+            message: 'Запись создана и добавлена в ваш календарь!');
       } else {
         _showSuccessDialog(
           message: 'Запись успешно создана!',
-          subMessage: 'Разрешите доступ к календарю для автоматических напоминаний.',
+          subMessage:
+              'Разрешите доступ к календарю для автоматических напоминаний.',
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Ошибка: ${e.toString()}'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -482,20 +537,28 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-              child: Icon(Icons.check_circle, size: 48, color: Colors.green.shade600),
+              decoration: BoxDecoration(
+                  color: Colors.green.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.check_circle,
+                  size: 48, color: Colors.green.shade600),
             ),
             const SizedBox(height: 16),
-            const Text('Успешно!', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Успешно!',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16)),
             if (subMessage != null) ...[
               const SizedBox(height: 12),
-              Text(subMessage, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4)),
+              Text(subMessage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13, color: Colors.grey.shade600, height: 1.4)),
             ],
           ],
         ),
@@ -508,21 +571,27 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
                 Navigator.pop(context);
                 Navigator.pop(context);
               },
-              child: Text('Настройки', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.w600)),
+              child: Text('Настройки',
+                  style: TextStyle(
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w600)),
             ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade600,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              minimumSize: const Size(double.infinity, 48), // Кнопка во всю ширину
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              minimumSize:
+                  const Size(double.infinity, 48), // Кнопка во всю ширину
               elevation: 0,
             ),
             onPressed: () {
               Navigator.pop(context); // Закрываем диалог
               Navigator.pop(context); // Возвращаемся назад
             },
-            child: const Text('Отлично', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Отлично',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -587,7 +656,7 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
             'start_time': startTime.toIso8601String(),
             'end_time': endTime.toIso8601String(),
             'status': 'pending',
-            'price_som': (service['price'] as num?)?.toInt() ?? 0,
+            'price_som': int.tryParse(service['price'].toString()) ?? 0,
           })
           .select()
           .single();
@@ -605,7 +674,8 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
 
       await NotificationService().showSimpleNotification(
         title: 'Запись создана',
-        body: 'Вы записаны на ${widget.serviceName} в $_selectedTimeSlot. Ожидайте подтверждения.',
+        body:
+            'Вы записаны на ${widget.serviceName} в $_selectedTimeSlot. Ожидайте подтверждения.',
       );
 
       await NotificationService().scheduleReminder(
@@ -641,12 +711,13 @@ class _BookServiceScreenState extends State<BookServiceScreen> {
       'master_name': response['profiles']['full_name'] as String?,
       'organization_id': response['profiles']['organization_id'],
       'title': response['title'] as String,
-      'duration_min': response['duration_min'] as int? ?? 60,
-      'price': (response['price'] as num?)?.toDouble() ?? 0.0,
+      'duration_min': int.tryParse(response['duration_min'].toString()) ?? 60,
+      'price': double.tryParse(response['price'].toString()) ?? 0.0,
     };
   }
 
-  Future<void> _sendNotificationToMaster(String masterId, DateTime startTime) async {
+  Future<void> _sendNotificationToMaster(
+      String masterId, DateTime startTime) async {
     await NotificationService().showSimpleNotification(
       title: 'Новая заявка',
       body: 'Новая запись на ${widget.serviceName} в ${_formatTime(startTime)}',
